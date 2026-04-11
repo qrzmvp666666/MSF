@@ -51,15 +51,6 @@ export default function Home() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white sticky top-0 z-10">
-        <div className="w-6" />
-        <div className="text-center">
-          <h1 className="text-base font-medium">广聚天下</h1>
-        </div>
-        <MoreHorizontal size={24} className="text-gray-600" />
-      </div>
-
       <div className="px-4 py-2">
         {/* Top Card */}
         <div className="bg-gradient-to-br from-orange-400 to-red-500 rounded-[14px] p-5 text-white relative overflow-hidden mb-4 shadow-sm mt-1">

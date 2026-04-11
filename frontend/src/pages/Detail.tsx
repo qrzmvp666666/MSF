@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, MoreHorizontal, Gift, X } from 'lucide-react';
+import { ChevronLeft, Gift } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import Login from './Login';
@@ -15,6 +15,11 @@ export default function Detail() {
   const [material, setMaterial] = useState<{ title: string, price: string, created_at: string } | null>(null);
   const [records, setRecords] = useState<{ id: string, title: string, content: string, created_at: string, is_winner: boolean }[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // 兑换相关状态
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [redeemCode, setRedeemCode] = useState('');
+  const [isRedeeming, setIsRedeeming] = useState(false);
 
   // 获取详情和往期记录
   const fetchData = useCallback(async () => {
@@ -38,6 +43,20 @@ export default function Detail() {
       })));
     }
     
+    // 检查当前用户是否已解锁该内容
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.id) {
+      const { data: exData } = await supabase
+        .from('exchange_records')
+        .select('id')
+        .eq('material_id', id)
+        .eq('user_id', session.user.id)
+        .limit(1);
+      if (exData && exData.length > 0) {
+        setIsUnlocked(true);
+      }
+    }
+
     setLoading(false);
   }, [id]);
 
@@ -71,6 +90,65 @@ export default function Detail() {
     };
   }, [id, fetchData]);
 
+  const handleRedeem = async () => {
+    if (!redeemCode.trim()) {
+      alert('请输入兑换码');
+      return;
+    }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setShowLoginModal(true);
+      return;
+    }
+    
+    setIsRedeeming(true);
+    try {
+      // 验证兑换码
+      const { data: codeData, error: codeError } = await supabase
+        .from('exchange_codes')
+        .select('*')
+        .eq('code', redeemCode)
+        .single();
+        
+      if (codeError || !codeData || codeData.is_used) {
+        alert('兑换码无效或已被使用');
+        setIsRedeeming(false);
+        return;
+      }
+      
+      // 生成兑换记录
+      const title = material ? material.title : '兑换内容';
+      const { error: recordError } = await supabase.from('exchange_records').insert({
+        user_id: session.user.id,
+        material_id: id,
+        code: redeemCode,
+        title: title,
+        status: '已完成'
+      });
+      
+      if (recordError) {
+        alert('生成兑换记录失败: ' + recordError.message);
+        setIsRedeeming(false);
+        return;
+      }
+      
+      // 更新兑换码状态
+      await supabase
+        .from('exchange_codes')
+        .update({ is_used: true })
+        .eq('id', codeData.id);
+        
+      alert('兑换成功！');
+      setIsUnlocked(true);
+      setRedeemCode('');
+    } catch (e: any) {
+      console.error(e);
+      alert('兑换出错: ' + e.message);
+    } finally {
+      setIsRedeeming(false);
+    }
+  };
+
   const handleDonateClick = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -99,18 +177,9 @@ export default function Detail() {
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20 relative">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white sticky top-0 z-10">
-        <ChevronLeft size={24} className="text-gray-600" onClick={() => navigate(-1)} />
-        <div className="text-center">
-          <h1 className="text-base font-medium">广聚天下</h1>
-        </div>
-        <MoreHorizontal size={24} className="text-gray-600" />
-      </div>
-
       <div className="px-4 py-4">
         {/* Author info */}
-        <div className="flex items-center mb-4">
+        <div className="flex items-center mb-4 mt-2">
           <div className="w-10 h-10 rounded-full bg-orange-200 overflow-hidden flex items-center justify-center mr-3">
              <span className="text-xl">🎁</span>
           </div>
@@ -128,10 +197,7 @@ export default function Detail() {
           <div className="text-center py-20 text-gray-500">资料不存在或已被删除</div>
         ) : (
           <>
-            <h1 className="text-xl font-bold text-gray-900 leading-snug mb-3">
-              {material.title}
-            </h1>
-            <div className="flex items-center text-xs text-gray-500 mb-6">
+            <div className="flex items-center text-xs text-gray-500 mb-6 mt-2">
               <span>{new Date(material.created_at).toLocaleString('zh-CN', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-')}</span>
               <span className="mx-2">•</span>
               <span>123321人已阅读</span>
@@ -139,20 +205,62 @@ export default function Detail() {
 
             {/* Paid Content */}
             <div className="mb-8">
-              <h3 className="font-bold text-gray-800 mb-3 text-lg flex items-center">
-                <span className="w-1 h-4 bg-red-500 rounded-full mr-2"></span>
-                付费内容
-              </h3>
-              <div className="bg-white rounded-xl shadow-sm p-10 flex flex-col items-center justify-center border border-gray-100">
-                <Gift className="text-red-400 w-16 h-16 mb-4 opacity-80" />
-                <p className="text-gray-400 text-sm">打赏 ¥{parseFloat(material.price).toFixed(2)} 解锁核心机密资料</p>
-                <button 
-                  onClick={handleDonateClick}
-                  className="mt-6 px-8 py-2.5 bg-red-500 text-white rounded-full text-sm font-bold shadow-md shadow-red-500/30"
-                >
-                  立即打赏解锁
-                </button>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-gray-800 text-lg flex items-center mb-0">
+                  <span className="w-1 h-4 bg-red-500 rounded-full mr-2"></span>
+                  当前最新内容（付费）
+                </h3>
+                {records.length > 0 && (
+                  <span className="text-xs text-red-500 bg-red-50 px-2 py-1 rounded border border-red-100">
+                    已更新: {new Date(records[0].created_at).toLocaleDateString()}
+                  </span>
+                )}
               </div>
+              
+              {isUnlocked && records.length > 0 ? (
+                <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                  <p className="font-bold text-gray-900 mb-3">{records[0].title}</p>
+                  <div 
+                    className="text-[15px] prose-sm prose-p:my-1 prose-headings:my-2 [&_span]:!leading-normal"
+                    dangerouslySetInnerHTML={{ __html: records[0].content }}
+                  />
+                </div>
+              ) : isUnlocked ? (
+                <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 text-center text-gray-500">
+                  暂无最新内容
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl shadow-sm p-8 flex flex-col items-center justify-center border border-gray-100">
+                  <Gift className="text-red-400 w-12 h-12 mb-4 opacity-80" />
+                  <p className="text-gray-400 text-sm mb-5">
+                    打赏 ¥{parseFloat(material.price).toFixed(2)} 或使用兑换码解锁
+                  </p>
+                  
+                  <div className="w-full max-w-xs relative mb-4 flex items-center">
+                    <input 
+                      type="text" 
+                      value={redeemCode}
+                      onChange={e => setRedeemCode(e.target.value)}
+                      placeholder="请输入兑换码" 
+                      className="w-full border border-gray-200 rounded-full pl-4 pr-20 py-2.5 text-sm focus:outline-none focus:border-red-400 transition-colors bg-gray-50"
+                    />
+                    <button 
+                      onClick={handleRedeem}
+                      disabled={isRedeeming}
+                      className="absolute right-1 top-1 bottom-1 px-4 bg-gray-900 text-white rounded-full text-sm font-medium whitespace-nowrap active:bg-gray-800 disabled:opacity-50"
+                    >
+                      {isRedeeming ? '...' : '兑换'}
+                    </button>
+                  </div>
+
+                  <button 
+                    onClick={handleDonateClick}
+                    className="mt-2 px-8 py-2.5 bg-red-500 text-white rounded-full text-sm font-bold shadow-md shadow-red-500/30 w-full max-w-xs"
+                  >
+                    立即打赏解锁
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* History records */}
@@ -161,9 +269,9 @@ export default function Detail() {
                 <span className="w-1 h-4 bg-orange-500 rounded-full mr-2"></span>
                 相关往期战绩参考
               </h3>
-              {records.length > 0 ? (
+              {records.length > 1 ? (
                 <div className="space-y-4">
-                  {records.map(record => (
+                  {records.slice(1).map(record => (
                     <div key={record.id} className="relative overflow-hidden bg-orange-50/50 rounded-xl p-4 border border-orange-100/50">
                       {record.is_winner && (
                         <div className="pointer-events-none absolute right-3 top-3 rotate-12 rounded-full border-2 border-red-400 px-3 py-1 text-xs font-extrabold tracking-[0.2em] text-red-400 opacity-80">

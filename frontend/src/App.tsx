@@ -51,7 +51,7 @@ function BottomNav() {
       </Link>
       <Link to="/orders" className={`flex flex-col items-center p-2 ${path === '/orders' ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
         <FileText size={22} className="mb-1" />
-        订单
+        记录
       </Link>
       <Link to="/profile" className={`flex flex-col items-center p-2 ${path === '/profile' ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
         <User size={22} className="mb-1" />

@@ -33,15 +33,6 @@ export default function Profile() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white sticky top-0 z-10">
-        <div className="w-6" />
-        <div className="text-center">
-          <h1 className="text-base font-medium">广聚天下</h1>
-        </div>
-        <MoreHorizontal size={24} className="text-gray-600" />
-      </div>
-
       <div className="px-4 py-4">
         {/* User Info */}
         <Link to="/profile/info" className="mb-6 flex items-center justify-between rounded-2xl transition-colors hover:bg-white/60">
@@ -99,7 +90,7 @@ export default function Profile() {
             */}
 
             {/* 订单记录 */}
-            <div onClick={() => navigate('/orders')} className="bg-white rounded-xl p-4 flex items-center shadow-sm cursor-pointer active:bg-gray-50">
+            <div onClick={() => navigate('/orders?tab=orders')} className="bg-white rounded-xl p-4 flex items-center shadow-sm cursor-pointer active:bg-gray-50">
               <div className="flex-1">
                 <h4 className="font-medium text-gray-800 text-base mb-1">订单记录</h4>
                 <p className="text-xs text-gray-400">查看您的购买记录</p>
@@ -110,7 +101,7 @@ export default function Profile() {
             </div>
 
             {/* 兑换记录 */}
-            <div onClick={() => navigate('/orders')} className="bg-white rounded-xl p-4 flex items-center shadow-sm cursor-pointer active:bg-gray-50">
+            <div onClick={() => navigate('/orders?tab=exchange')} className="bg-white rounded-xl p-4 flex items-center shadow-sm cursor-pointer active:bg-gray-50">
               <div className="flex-1">
                 <h4 className="font-medium text-gray-800 text-base mb-1">兑换记录</h4>
                 <p className="text-xs text-gray-400">查看您的兑换详情</p>
