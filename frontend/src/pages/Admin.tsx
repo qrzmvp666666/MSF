@@ -315,8 +315,7 @@ export default function Admin() {
       <div className="min-h-screen bg-gray-50 pb-10">
         <div className="sticky top-0 z-10 flex items-center justify-between bg-white px-4 py-3 shadow-sm">
           <button onClick={() => setEditingRecord(null)} className="flex items-center text-gray-600">
-            <ArrowLeft size={20} className="mr-1" />
-            <span className="text-sm">返回</span>
+            <ArrowLeft size={24} />
           </button>
           <span className="text-base font-medium">编辑往期记录</span>
           <button onClick={handleSaveRecord} className="flex items-center text-blue-500 font-medium">
@@ -373,8 +372,7 @@ export default function Admin() {
       <div className="min-h-screen bg-gray-50 pb-10">
         <div className="sticky top-0 z-10 flex items-center justify-between bg-white px-4 py-3 shadow-sm">
           <button onClick={() => setEditingMaterial(null)} className="flex items-center text-gray-600">
-            <ArrowLeft size={20} className="mr-1" />
-            <span className="text-sm">返回外层</span>
+            <ArrowLeft size={24} />
           </button>
           <span className="text-base font-medium w-full text-center truncate mx-4">
             {editingMaterial.id.startsWith('new_') ? '发布新资料' : '编辑资料'}
