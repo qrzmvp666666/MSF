@@ -9,6 +9,7 @@ interface Record {
   id: string;
   title: string;
   content: string;
+  is_winner: boolean;
   material_id?: string;
   created_at?: string;
 }
@@ -84,7 +85,10 @@ export default function Admin() {
         title: m.title,
         price: String(m.price || 0),
         created_at: m.created_at,
-        records: (recs || []).filter((r: { id: string, title: string, content: string, material_id: string }) => r.material_id === m.id)
+        records: (recs || []).filter((r: { id: string, title: string, content: string, material_id: string, is_winner?: boolean }) => r.material_id === m.id).map((r) => ({
+          ...r,
+          is_winner: Boolean(r.is_winner),
+        }))
       }));
       setMaterials(matched);
       // update editingMaterial if currently editing
@@ -135,10 +139,20 @@ export default function Admin() {
   const handleSaveMaterial = async () => {
     if (!editingMaterial) return;
     if (editingMaterial.id.startsWith('new_')) {
-      await supabase.from('materials').insert({
+      const { data } = await supabase.from('materials').insert({
         title: editingMaterial.title,
         price: parseFloat(editingMaterial.price) || 0
-      });
+      }).select().single();
+      
+      if (data && editingMaterial.records && editingMaterial.records.length > 0) {
+        const recordsToInsert = editingMaterial.records.map(r => ({
+          material_id: data.id,
+          title: r.title,
+          content: r.content,
+          is_winner: r.is_winner,
+        }));
+        await supabase.from('records').insert(recordsToInsert);
+      }
     } else {
       await supabase.from('materials').update({
         title: editingMaterial.title,
@@ -167,16 +181,32 @@ export default function Admin() {
 
   const handleSaveRecord = async () => {
     if (!editingRecord || !editingMaterial) return;
+
+    if (editingMaterial.id.startsWith('new_')) {
+      const newRecords = [...editingMaterial.records];
+      const idx = newRecords.findIndex(r => r.id === editingRecord.id);
+      if (idx >= 0) {
+        newRecords[idx] = editingRecord;
+      } else {
+        newRecords.push(editingRecord);
+      }
+      setEditingMaterial({ ...editingMaterial, records: newRecords });
+      setEditingRecord(null);
+      return;
+    }
+
     if (editingRecord.id.startsWith('new_')) {
       await supabase.from('records').insert({
         material_id: editingMaterial.id,
         title: editingRecord.title,
-        content: editingRecord.content
+        content: editingRecord.content,
+        is_winner: editingRecord.is_winner,
       });
     } else {
       await supabase.from('records').update({
         title: editingRecord.title,
-        content: editingRecord.content
+        content: editingRecord.content,
+        is_winner: editingRecord.is_winner,
       }).eq('id', editingRecord.id);
     }
     setEditingRecord(null);
@@ -186,8 +216,9 @@ export default function Admin() {
   const handleCreateRecord = () => {
     setEditingRecord({
       id: 'new_' + Date.now(),
-      title: '新往期记录标题 (如: 第100期...)',
-      content: '<p><span style="color: red; font-size: 18px">输入记录内容...</span></p>'
+      title: '新记录标题',
+      content: '<p><span style="color: red; font-size: 18px">输入记录内容...</span></p>',
+      is_winner: false,
     });
   };
 
@@ -197,8 +228,15 @@ export default function Admin() {
 
   const handleDeleteRecord = async (id: string) => {
     if (confirm('确定要删除这条记录吗？')) {
-      await supabase.from('records').delete().eq('id', id);
-      fetchMaterials();
+      if (editingMaterial?.id.startsWith('new_')) {
+        setEditingMaterial({
+          ...editingMaterial,
+          records: editingMaterial.records.filter(r => r.id !== id)
+        });
+      } else {
+        await supabase.from('records').delete().eq('id', id);
+        fetchMaterials();
+      }
     }
   };
 
@@ -287,7 +325,7 @@ export default function Admin() {
         
         <div className="p-4 space-y-4">
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-            <label className="block text-sm font-medium text-gray-700 mb-1">记录期号/标题</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">记录标题</label>
             <input 
               type="text" 
               className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -296,7 +334,26 @@ export default function Admin() {
             />
           </div>
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-            <label className="block text-sm font-medium text-gray-700 mb-1">连红结果 (富文本)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">中奖状态</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingRecord({ ...editingRecord, is_winner: false })}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${!editingRecord.is_winner ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'}`}
+              >
+                未中
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingRecord({ ...editingRecord, is_winner: true })}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${editingRecord.is_winner ? 'bg-red-500 text-white' : 'bg-red-50 text-red-500'}`}
+              >
+                中奖
+              </button>
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <label className="block text-sm font-medium text-gray-700 mb-1">内容</label>
             <RichTextEditor 
               key={editingRecord.id}
               initialContent={editingRecord.content} 
@@ -329,7 +386,7 @@ export default function Admin() {
         <div className="p-4 space-y-6">
           <div className="space-y-4">
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-              <label className="block text-sm font-medium text-gray-700 mb-1">资料标题 (文章名称)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">资料标题</label>
               <input 
                 type="text" 
                 className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -348,48 +405,54 @@ export default function Admin() {
             </div>
           </div>
 
-          {!editingMaterial.id.startsWith('new_') && (
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-medium text-gray-800">该资料的往期记录 (必须先保存资料才可加记录)</h2>
-                <button 
-                  onClick={handleCreateRecord}
-                  className="flex items-center text-sm text-red-500 bg-red-50 px-3 py-1.5 rounded-full"
-                >
-                  <Plus size={16} className="mr-1" />
-                  添加往期记录
-                </button>
-              </div>
-              
-              <div className="space-y-3">
-                {editingMaterial.records.map(record => (
-                  <div key={record.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium text-gray-800">{record.title}</h3>
-                    </div>
-                    <div 
-                      className="text-sm text-gray-500 mb-3 bg-red-50/50 p-2 rounded"
-                      dangerouslySetInnerHTML={{__html: record.content}}
-                    />
-                    <div className="flex justify-end gap-4 pt-2 border-t border-gray-50">
-                      <button onClick={() => setEditingRecord({...record})} className="flex items-center text-xs text-blue-500">
-                        <Edit2 size={14} className="mr-1" /> 编辑期号内容
-                      </button>
-                      <button onClick={() => handleDeleteRecord(record.id)} className="flex items-center text-xs text-red-500">
-                        <Trash2 size={14} className="mr-1" /> 删除期号
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                
-                {editingMaterial.records.length === 0 && (
-                  <div className="text-center py-8 text-gray-400 text-sm bg-white rounded-xl border border-gray-100">
-                    暂无往期记录
-                  </div>
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-gray-800">往期记录</h2>
+                {editingMaterial.id.startsWith('new_') && (
+                  <span className="text-[11px] text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full">随资料一起保存</span>
                 )}
               </div>
-            </section>
-          )}
+              <button 
+                onClick={handleCreateRecord}
+                className="flex items-center text-xs text-red-500 bg-red-50 px-3 py-1.5 rounded-full font-medium"
+              >
+                <Plus size={14} className="mr-1" />
+                添加记录
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              {editingMaterial.records.map(record => (
+                <div key={record.id} className="bg-white p-3.5 rounded-xl shadow-sm border border-gray-100">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-[13px] font-bold text-gray-800 truncate pr-2">{record.title}</h3>
+                    {record.is_winner && (
+                      <span className="shrink-0 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-500">已中</span>
+                    )}
+                  </div>
+                  <div 
+                    className="text-xs text-gray-600 mb-2 bg-red-50/50 px-2.5 py-2 rounded-lg line-clamp-3"
+                    dangerouslySetInnerHTML={{__html: record.content}}
+                  />
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button onClick={() => setEditingRecord({...record})} className="flex items-center text-xs text-blue-500 font-medium bg-blue-50 px-3 py-1.5 rounded-full">
+                      <Edit2 size={13} className="mr-1" /> 编辑
+                    </button>
+                    <button onClick={() => handleDeleteRecord(record.id)} className="flex items-center text-xs text-gray-500 font-medium bg-gray-50 px-3 py-1.5 rounded-full">
+                      <Trash2 size={13} className="mr-1" /> 删除
+                    </button>
+                  </div>
+                </div>
+              ))}
+              
+              {editingMaterial.records.length === 0 && (
+                <div className="text-center py-8 text-gray-400 text-sm bg-white rounded-xl border border-gray-100">
+                  暂无往期记录
+                </div>
+              )}
+            </div>
+          </section>
         </div>
       </div>
     );
@@ -435,11 +498,11 @@ export default function Admin() {
                   </div>
                   
                   <div className="flex justify-end gap-4 pt-3 mt-3 border-t border-gray-50">
-                    <button onClick={() => setEditingMaterial({...material})} className="flex items-center text-sm text-blue-500">
-                      <Edit2 size={16} className="mr-1" /> 编辑 & 记录
+                    <button onClick={() => setEditingMaterial({...material})} className="flex items-center text-sm text-blue-500 font-medium bg-blue-50 px-4 py-1.5 rounded-full">
+                      <Edit2 size={15} className="mr-1.5" /> 管理 & 编辑
                     </button>
-                    <button onClick={() => handleDeleteMaterial(material.id)} className="flex items-center text-sm text-red-500">
-                      <Trash2 size={16} className="mr-1" /> 删除
+                    <button onClick={() => handleDeleteMaterial(material.id)} className="flex items-center text-sm text-gray-500 font-medium bg-gray-50 px-4 py-1.5 rounded-full">
+                      <Trash2 size={15} className="mr-1.5" /> 删除
                     </button>
                   </div>
                 </div>

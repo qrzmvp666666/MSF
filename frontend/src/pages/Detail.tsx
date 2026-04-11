@@ -13,7 +13,7 @@ export default function Detail() {
   
   // 数据状态
   const [material, setMaterial] = useState<{ title: string, price: string, created_at: string } | null>(null);
-  const [records, setRecords] = useState<{ id: string, title: string, content: string, created_at: string }[]>([]);
+  const [records, setRecords] = useState<{ id: string, title: string, content: string, created_at: string, is_winner: boolean }[]>([]);
   const [loading, setLoading] = useState(true);
 
   // 获取详情和往期记录
@@ -33,7 +33,8 @@ export default function Detail() {
         id: r.id,
         title: r.title,
         content: r.content,
-        created_at: r.created_at
+        created_at: r.created_at,
+        is_winner: Boolean(r.is_winner),
       })));
     }
     
@@ -164,8 +165,13 @@ export default function Detail() {
               {records.length > 0 ? (
                 <div className="space-y-4">
                   {records.map(record => (
-                    <div key={record.id} className="bg-orange-50/50 rounded-xl p-4 border border-orange-100/50">
-                      <p className="font-bold text-gray-900 mb-2 truncate">{record.title}</p>
+                    <div key={record.id} className="relative overflow-hidden bg-orange-50/50 rounded-xl p-4 border border-orange-100/50">
+                      {record.is_winner && (
+                        <div className="pointer-events-none absolute right-3 top-3 rotate-12 rounded-full border-2 border-red-400 px-3 py-1 text-xs font-extrabold tracking-[0.2em] text-red-400 opacity-80">
+                          中奖
+                        </div>
+                      )}
+                      <p className="font-bold text-gray-900 mb-2 truncate pr-16">{record.title}</p>
                       <div 
                         className="text-[15px] prose-sm prose-p:my-1 prose-headings:my-2 [&_span]:!leading-normal" 
                         dangerouslySetInnerHTML={{ __html: record.content }} 
