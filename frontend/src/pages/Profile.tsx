@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { X, MoreHorizontal, Eye, MessageSquare, ShieldCheck, Headphones, Wallet, ChevronRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { X, MoreHorizontal, Eye, MessageSquare, ShieldCheck, Headphones, Wallet, ChevronRight, FileText, History } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function Profile() {
+  const navigate = useNavigate();
   const [nickname, setNickname] = useState('');
   const [avatar, setAvatar] = useState('👨‍💼');
   const [userId, setUserId] = useState('');
@@ -34,7 +35,7 @@ export default function Profile() {
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-white sticky top-0 z-10">
-        <X size={24} className="text-gray-600" />
+        <div className="w-6" />
         <div className="text-center">
           <h1 className="text-base font-medium">广聚天下</h1>
         </div>
@@ -61,7 +62,8 @@ export default function Profile() {
           </div>
         </Link>
 
-        {/* Balance Card */}
+        {/* Balance Card (已隐藏) */}
+        {/* 
         <div className="bg-gradient-to-r from-red-400 to-red-600 rounded-2xl p-5 text-white mb-6 shadow-md relative overflow-hidden">
           <div className="flex items-center mb-2">
             <span className="text-sm font-medium mr-2 text-red-50">我的彩贝</span>
@@ -73,17 +75,18 @@ export default function Profile() {
               去充值
             </button>
           </div>
-          {/* Decorative shapes */}
           <div className="absolute -right-4 -top-8 w-24 h-24 rounded-full bg-white opacity-10"></div>
           <div className="absolute right-10 -bottom-10 w-24 h-24 rounded-full bg-red-700 opacity-20"></div>
         </div>
+        */}
 
         {/* More Functions */}
         <div className="mb-4">
           <h3 className="font-bold text-gray-800 mb-3 text-lg">更多功能</h3>
           
           <div className="grid grid-cols-2 gap-3">
-            {/* Item 1 */}
+            {/* Item 1 (彩贝明细已隐藏) */}
+            {/* 
             <div className="bg-white rounded-xl p-4 flex items-center shadow-sm">
               <div className="flex-1">
                 <h4 className="font-medium text-gray-800 text-base mb-1">彩贝明细</h4>
@@ -91,6 +94,29 @@ export default function Profile() {
               </div>
               <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
                 <Wallet className="text-red-400" size={20} />
+              </div>
+            </div>
+            */}
+
+            {/* 订单记录 */}
+            <div onClick={() => navigate('/orders')} className="bg-white rounded-xl p-4 flex items-center shadow-sm cursor-pointer active:bg-gray-50">
+              <div className="flex-1">
+                <h4 className="font-medium text-gray-800 text-base mb-1">订单记录</h4>
+                <p className="text-xs text-gray-400">查看您的购买记录</p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                <FileText className="text-blue-400" size={20} />
+              </div>
+            </div>
+
+            {/* 兑换记录 */}
+            <div onClick={() => navigate('/orders')} className="bg-white rounded-xl p-4 flex items-center shadow-sm cursor-pointer active:bg-gray-50">
+              <div className="flex-1">
+                <h4 className="font-medium text-gray-800 text-base mb-1">兑换记录</h4>
+                <p className="text-xs text-gray-400">查看您的兑换详情</p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center">
+                <History className="text-purple-400" size={20} />
               </div>
             </div>
 

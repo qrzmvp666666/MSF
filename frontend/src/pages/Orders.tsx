@@ -32,7 +32,7 @@ export default function Orders() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <div className="sticky top-0 z-10 flex items-center justify-between bg-white px-4 py-3 shadow-sm">
-        <X size={24} className="text-gray-600" />
+        <div className="w-6" />
         <div className="text-center">
           <h1 className="text-base font-medium">广聚天下</h1>
         </div>
