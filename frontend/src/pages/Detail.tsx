@@ -1,14 +1,74 @@
-import { useState } from 'react';
-import { ChevronLeft, MoreHorizontal, Gift, X, CheckCircle2, Circle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { ChevronLeft, MoreHorizontal, Gift, X } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import Login from './Login';
 
 export default function Detail() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [showPaymentSheet, setShowPaymentSheet] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'alipay' | 'caibei'>('alipay');
+  
+  // 数据状态
+  const [material, setMaterial] = useState<{ title: string, price: string, created_at: string } | null>(null);
+  const [records, setRecords] = useState<{ id: string, title: string, content: string, created_at: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // 获取详情和往期记录
+  const fetchData = useCallback(async () => {
+    if (!id) return;
+    
+    // 取资料详情
+    const { data: matData } = await supabase.from('materials').select('*').eq('id', id).single();
+    if (matData) {
+      setMaterial({ title: matData.title, price: matData.price.toString(), created_at: matData.created_at });
+    }
+    
+    // 取往期记录
+    const { data: recData } = await supabase.from('records').select('*').eq('material_id', id).order('created_at', { ascending: false });
+    if (recData) {
+      setRecords(recData.map(r => ({
+        id: r.id,
+        title: r.title,
+        content: r.content,
+        created_at: r.created_at
+      })));
+    }
+    
+    setLoading(false);
+  }, [id]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchData();
+
+    // 订阅当前资料 records 表的变更以实现实时通信
+    const channel = supabase
+      .channel(`public:records:material_id=eq.${id}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'records',
+        filter: `material_id=eq.${id}`
+      }, () => {
+        fetchData();
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'materials',
+        filter: `id=eq.${id}`
+      }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, fetchData]);
 
   const handleDonateClick = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -58,41 +118,69 @@ export default function Detail() {
         </div>
 
         {/* Notice */}
-        <div className="bg-yellow-50 text-yellow-700 text-sm p-3 rounded-lg leading-relaxed mb-6">
+        <div className="bg-yellow-50 text-yellow-700 text-[13px] p-3 rounded-lg leading-relaxed mb-6">
           所有文字、图片仅供参考，不保证连续性及任何承诺，自愿付费打赏，请谨慎下单，购买即接受协议，本声明具有法律效力依据，请悉知！
         </div>
 
-        {/* Paid Content */}
-        <div className="mb-6">
-          <h3 className="font-bold text-gray-800 mb-3 text-lg">付费内容</h3>
-          <div className="bg-white rounded-xl shadow-sm p-10 flex flex-col items-center justify-center border border-gray-100">
-            <Gift className="text-red-400 w-16 h-16 mb-4 opacity-80" />
-            <p className="text-gray-400 text-sm">打赏解锁付费内容</p>
-          </div>
-        </div>
+        {loading ? (
+          <div className="text-center py-20 text-gray-500">正在加载数据...</div>
+        ) : !material ? (
+          <div className="text-center py-20 text-gray-500">资料不存在或已被删除</div>
+        ) : (
+          <>
+            <h1 className="text-xl font-bold text-gray-900 leading-snug mb-3">
+              {material.title}
+            </h1>
+            <div className="flex items-center text-xs text-gray-500 mb-6">
+              <span>{new Date(material.created_at).toLocaleString('zh-CN', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-')}</span>
+              <span className="mx-2">•</span>
+              <span>123321人已阅读</span>
+            </div>
 
-        {/* History records */}
-        <div>
-          <h3 className="font-bold text-gray-800 mb-3 text-lg">往期记录</h3>
-          <div className="bg-white rounded-xl shadow-sm p-4 text-sm border border-gray-100">
-            <div className="mb-4">
-              <p className="font-medium text-gray-700 mb-2">第100期 新澳 16码 连红稳吃肉</p>
-              <div className="flex flex-wrap gap-x-5 gap-y-2 text-red-500 font-medium ml-2 mt-3 text-[15px]">
-                <span>龙</span>
-                <span>马</span>
-                <span>鸡</span>
-                <span>狗</span>
+            {/* Paid Content */}
+            <div className="mb-8">
+              <h3 className="font-bold text-gray-800 mb-3 text-lg flex items-center">
+                <span className="w-1 h-4 bg-red-500 rounded-full mr-2"></span>
+                付费内容
+              </h3>
+              <div className="bg-white rounded-xl shadow-sm p-10 flex flex-col items-center justify-center border border-gray-100">
+                <Gift className="text-red-400 w-16 h-16 mb-4 opacity-80" />
+                <p className="text-gray-400 text-sm">打赏 ¥{parseFloat(material.price).toFixed(2)} 解锁核心机密资料</p>
+                <button 
+                  onClick={handleDonateClick}
+                  className="mt-6 px-8 py-2.5 bg-red-500 text-white rounded-full text-sm font-bold shadow-md shadow-red-500/30"
+                >
+                  立即打赏解锁
+                </button>
               </div>
             </div>
-            
-            <div className="border-t border-gray-100 pt-4 mt-2 mb-4">
-              <p className="font-medium text-gray-700 mb-2">第099期 新澳 16码 连红稳吃肉</p>
-              <div className="flex flex-wrap gap-x-5 gap-y-2 text-red-500 font-medium ml-2 mt-3 text-[15px]">
-                <span>猪</span>
-              </div>
+
+            {/* History records */}
+            <div className="border-t border-gray-100 pt-6">
+              <h3 className="font-bold text-gray-800 mb-4 text-lg flex items-center">
+                <span className="w-1 h-4 bg-orange-500 rounded-full mr-2"></span>
+                相关往期战绩参考
+              </h3>
+              {records.length > 0 ? (
+                <div className="space-y-4">
+                  {records.map(record => (
+                    <div key={record.id} className="bg-orange-50/50 rounded-xl p-4 border border-orange-100/50">
+                      <p className="font-bold text-gray-900 mb-2 truncate">{record.title}</p>
+                      <div 
+                        className="text-[15px] prose-sm prose-p:my-1 prose-headings:my-2 [&_span]:!leading-normal" 
+                        dangerouslySetInnerHTML={{ __html: record.content }} 
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl shadow-sm p-8 text-center border border-gray-100 text-gray-400 text-sm">
+                  <p>暂无相关战绩记录</p>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
       {/* Floating Red Return Button */}
@@ -104,10 +192,10 @@ export default function Detail() {
       </div>
 
       {/* Floating Action Bar */}
-      <div className="fixed bottom-6 left-0 w-full max-w-md z-50 px-4">
-        <div className="bg-[#fdf4cd] rounded-full flex items-center justify-between pl-5 pr-1 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.1)] border border-[#fbe8b5]">
+      <div className="fixed bottom-6 left-0 right-0 z-50 px-4 flex justify-center">
+        <div className="bg-[#fdf4cd] rounded-full flex items-center justify-between pl-5 pr-1 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.1)] border border-[#fbe8b5] w-full max-w-[600px]">
           <div className="text-[#9d5c36] font-bold text-[17px] tracking-wide flex-1">
-            打赏价格: 288.00
+            打赏价格: {loading || !material ? '--' : parseFloat(material.price).toFixed(2)}
           </div>
           <button
             onClick={handleDonateClick}

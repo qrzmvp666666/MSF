@@ -1,8 +1,53 @@
+import { useState, useEffect } from 'react';
 import { X, Search, Volume2, MoreHorizontal, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+
+interface Material {
+  id: string;
+  title: string;
+  price: string;
+  created_at: string;
+}
 
 export default function Home() {
-  const noticeText = '义务，相关责任由内容提供者自行承担。3、平台仅提供信息展示服务。所有文字、图片仅供参考，请谨慎判断，自愿下单购买。购买即视为同意相关协议内容，平台不承诺连续性及准确性。';
+  const noticeText = '平台仅提供信息展示服务。所有文字、图片仅供参考，请谨慎判断，自愿下单购买。';
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchMaterials = async () => {
+    const { data } = await supabase
+      .from('materials')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (data) {
+      setMaterials(data.map(m => ({
+        id: m.id,
+        title: m.title,
+        price: m.price.toString(),
+        created_at: m.created_at
+      })));
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchMaterials();
+
+    // 订阅 materials 表的插入、更新和删除
+    const channel = supabase
+      .channel('public:materials')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'materials' }, () => {
+        fetchMaterials();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -75,39 +120,25 @@ export default function Home() {
         </div>
 
         {/* List */}
-        <div className="space-y-3">
-          <Link to="/detail" className="block bg-white rounded-xl p-4 shadow-sm">
-            <div className="flex justify-between items-start mb-6">
-              <h3 className="font-bold text-gray-800 text-base leading-snug w-2/3">第101期 新澳 站长特供 一肖一码 爆红🔥🔥🔥</h3>
-              <span className="text-red-500 font-bold text-lg">¥1999.99</span>
-            </div>
-            <div className="flex justify-between text-xs text-gray-400">
-              <span>发布时间</span>
-              <span>2026-04-11 11:56</span>
-            </div>
-          </Link>
-
-          <Link to="/detail" className="block bg-white rounded-xl p-4 shadow-sm">
-            <div className="flex justify-between items-start mb-6">
-              <h3 className="font-bold text-gray-800 text-base leading-snug w-2/3">第101期 新澳 16码 连红稳吃肉</h3>
-              <span className="text-red-500 font-bold text-lg">¥288.00</span>
-            </div>
-            <div className="flex justify-between text-xs text-gray-400">
-              <span>发布时间</span>
-              <span>2026-04-11 11:50</span>
-            </div>
-          </Link>
-
-          <Link to="/detail" className="block bg-white rounded-xl p-4 shadow-sm">
-            <div className="flex justify-between items-start mb-6">
-              <h3 className="font-bold text-gray-800 text-base leading-snug w-2/3">第101期 新澳 粤港澳巡城 稳③特 长期跟踪赚到爆</h3>
-              <span className="text-red-500 font-bold text-lg">¥862.80</span>
-            </div>
-            <div className="flex justify-between text-xs text-gray-400">
-              <span>发布时间</span>
-              <span>2026-04-11 11:20</span>
-            </div>
-          </Link>
+        <div className="space-y-3 pb-20">
+          {loading ? (
+            <div className="text-center py-10 text-gray-400 text-sm">加载数据中...</div>
+          ) : materials.length > 0 ? (
+            materials.map((m) => (
+              <Link to={`/detail/${m.id}`} key={m.id} className="block bg-white rounded-xl p-4 shadow-sm active:bg-gray-50 transition-colors">
+                <div className="flex justify-between items-start mb-6">
+                  <h3 className="font-bold text-gray-800 text-base leading-snug w-2/3">{m.title}</h3>
+                  <span className="text-red-500 font-bold text-lg">¥{parseFloat(m.price).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-400">
+                  <span>发布时间</span>
+                  <span>{new Date(m.created_at).toLocaleString('zh-CN', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-')}</span>
+                </div>
+              </Link>
+            ))
+          ) : (
+            <div className="text-center py-10 text-gray-400 text-sm">暂无数据</div>
+          )}
         </div>
       </div>
     </div>

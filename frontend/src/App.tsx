@@ -27,7 +27,7 @@ function AppShell() {
         <Route path="/login" element={<Login />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/" element={<Home />} />
-        <Route path="/detail" element={<Detail />} />
+        <Route path="/detail/:id" element={<Detail />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/info" element={<ProfileInfo />} />
         <Route path="/orders" element={<Orders />} />
@@ -41,7 +41,7 @@ function AppShell() {
 function BottomNav() {
   const location = useLocation();
   const path = location.pathname;
-  if (path === '/detail' || path === '/profile/info' || path === '/admin') return null;
+  if (path.startsWith('/detail') || path === '/profile/info' || path === '/admin') return null;
 
   return (
     <div className="fixed bottom-0 w-full max-w-md bg-white border-t flex justify-around items-center h-16 text-xs z-50">

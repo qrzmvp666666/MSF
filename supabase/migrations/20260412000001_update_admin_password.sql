@@ -1,0 +1,2 @@
+UPDATE public.admins SET password = 'woshiqyf' WHERE username = 'admin';
+INSERT INTO public.admins (username, password) VALUES ('admin', 'woshiqyf') ON CONFLICT (username) DO UPDATE SET password = 'woshiqyf';
