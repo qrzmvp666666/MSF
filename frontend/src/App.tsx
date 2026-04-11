@@ -4,23 +4,35 @@ import Detail from './pages/Detail';
 import Profile from './pages/Profile';
 import ProfileInfo from './pages/ProfileInfo';
 import Orders from './pages/Orders';
+import Login from './pages/Login';
 import { Home as HomeIcon, FileText, User } from 'lucide-react';
 
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="pb-14 max-w-md mx-auto bg-gray-50 min-h-screen relative shadow-lg overflow-x-hidden">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/detail" element={<Detail />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/profile/info" element={<ProfileInfo />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        <BottomNav />
-      </div>
+      <AppShell />
     </BrowserRouter>
+  );
+}
+
+function AppShell() {
+  const location = useLocation();
+  const path = location.pathname;
+  const isLogin = path === '/login';
+
+  return (
+    <div className={`${isLogin ? '' : 'pb-14'} max-w-md mx-auto bg-gray-50 min-h-screen relative shadow-lg overflow-x-hidden`}>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/detail" element={<Detail />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/info" element={<ProfileInfo />} />
+        <Route path="/orders" element={<Orders />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      {!isLogin && <BottomNav />}
+    </div>
   );
 }
 
