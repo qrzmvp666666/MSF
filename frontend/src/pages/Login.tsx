@@ -71,8 +71,7 @@ export default function Login({ isModal = false, onSuccess }: { isModal?: boolea
           <div className="mb-1 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/20 backdrop-blur-sm shadow-inner">
             <span className="text-3xl">🔥</span>
           </div>
-          <div className="mt-4 text-[26px] font-bold tracking-widest text-white">猛料平台</div>
-          <div className="mt-1.5 text-sm text-red-100">专业内容 · 精准分析</div>
+          <div className="mt-4 text-[26px] font-bold tracking-widest text-white">广聚天下</div>
         </div>
       </div>
 

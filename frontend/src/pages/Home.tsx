@@ -55,8 +55,7 @@ export default function Home() {
       <div className="flex items-center justify-between px-4 py-3 bg-white sticky top-0 z-10">
         <X size={24} className="text-gray-600" />
         <div className="text-center">
-          <h1 className="text-base font-medium">知识</h1>
-          <p className="text-xs text-gray-400">www.xqacr.cn</p>
+          <h1 className="text-base font-medium">广聚天下</h1>
         </div>
         <MoreHorizontal size={24} className="text-gray-600" />
       </div>
