@@ -1,11 +1,23 @@
 import { useState } from 'react';
 import { ChevronLeft, MoreHorizontal, Gift, X, CheckCircle2, Circle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import Login from './Login';
 
 export default function Detail() {
   const navigate = useNavigate();
   const [showPaymentSheet, setShowPaymentSheet] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'wechat' | 'alipay' | 'star-card'>('wechat');
+
+  const handleDonateClick = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setShowLoginModal(true);
+      return;
+    }
+    setShowPaymentSheet(true);
+  };
 
   const paymentOptions = [
     {
@@ -105,7 +117,7 @@ export default function Detail() {
             打赏价格: 288.00
           </div>
           <button
-            onClick={() => setShowPaymentSheet(true)}
+            onClick={handleDonateClick}
             className="bg-gradient-to-r from-[#ff6b57] to-[#ff4141] hover:opacity-95 text-white font-bold text-[16px] px-8 py-3 rounded-full shadow-md transition-opacity"
           >
             打赏解锁
@@ -174,6 +186,18 @@ export default function Detail() {
             </button>
           </div>
         </>
+      )}
+
+      {showLoginModal && (
+        <div className="fixed inset-0 z-[100] bg-white animate-[slideUp_0.3s_ease-out]">
+          <button
+            onClick={() => setShowLoginModal(false)}
+            className="absolute top-4 right-4 z-[110] p-2 bg-black/10 rounded-full text-white hover:bg-black/20 transition-colors"
+          >
+            <X size={20} />
+          </button>
+          <Login isModal onSuccess={() => { setShowLoginModal(false); setShowPaymentSheet(true); }} />
+        </div>
       )}
     </div>
   );

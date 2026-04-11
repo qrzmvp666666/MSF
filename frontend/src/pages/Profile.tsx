@@ -1,7 +1,35 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { X, MoreHorizontal, Eye, MessageSquare, ShieldCheck, Headphones, Wallet, ChevronRight } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function Profile() {
+  const [nickname, setNickname] = useState('');
+  const [avatar, setAvatar] = useState('👨‍💼');
+  const [userId, setUserId] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setUserId(user.id.slice(0, 8).toUpperCase());
+
+      const fallbackNickname = user.email ? user.email.replace('@msf.local', '') : '未设置';
+
+      const { data } = await supabase
+        .from('profiles')
+        .select('nickname, avatar')
+        .eq('id', user.id)
+        .single();
+      if (data) {
+        setNickname(data.nickname || fallbackNickname);
+        setAvatar(data.avatar ?? '👨‍💼');
+      } else {
+        setNickname(fallbackNickname);
+      }
+    })();
+  }, []);
+
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
@@ -16,13 +44,13 @@ export default function Profile() {
         <Link to="/profile/info" className="mb-6 flex items-center justify-between rounded-2xl transition-colors hover:bg-white/60">
           <div className="flex items-center">
             <div className="w-14 h-14 rounded-full bg-blue-100 overflow-hidden flex items-center justify-center mr-4 border border-gray-100">
-               <span className="text-2xl">👨‍💼</span>
+               <span className="text-2xl">{avatar}</span>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-800">永丰机械</h2>
+              <h2 className="text-xl font-bold text-gray-800">{nickname || '未设置'}</h2>
               <div className="flex items-center mt-1">
                 <span className="bg-red-50 text-red-500 text-xs px-2 py-0.5 rounded mr-2 border border-red-100">SVIP</span>
-                <span className="text-gray-500 text-sm">34203759</span>
+                <span className="text-gray-500 text-sm">ID: {userId || '—'}</span>
               </div>
             </div>
           </div>

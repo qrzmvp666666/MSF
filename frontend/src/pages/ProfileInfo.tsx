@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, X, Loader2, CheckCircle2, AlertCircle } from
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
-type EditField = 'phone' | 'nickname' | 'avatar' | 'password' | null;
+type EditField = 'nickname' | 'avatar' | 'password' | null;
 
 const AVATARS = ['👨‍💼', '👩‍💼', '🧑‍🦲', '👨‍🍳', '🧑‍💻', '👩‍🎤', '🧑‍🚀', '🧑‍🎨'];
 
@@ -12,7 +12,6 @@ type Toast = { type: 'success' | 'error'; msg: string } | null;
 export default function ProfileInfo() {
   const navigate = useNavigate();
   const [editField, setEditField] = useState<EditField>(null);
-  const [phone, setPhone] = useState('');
   const [nickname, setNickname] = useState('');
   const [avatar, setAvatar] = useState('👨‍💼');
   const [userId, setUserId] = useState('');
@@ -29,7 +28,9 @@ export default function ProfileInfo() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUserId(user.id.slice(0, 8).toUpperCase());
-      setPhone(user.phone ? user.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '');
+
+      // Try to get account name from email
+      const fallbackNickname = user.email ? user.email.replace('@msf.local', '') : '未设置';
 
       const { data } = await supabase
         .from('profiles')
@@ -37,8 +38,10 @@ export default function ProfileInfo() {
         .eq('id', user.id)
         .single();
       if (data) {
-        setNickname(data.nickname ?? '');
+        setNickname(data.nickname || fallbackNickname);
         setAvatar(data.avatar ?? '👨‍💼');
+      } else {
+        setNickname(fallbackNickname);
       }
     })();
   }, []);
@@ -49,7 +52,6 @@ export default function ProfileInfo() {
   }
 
   function openEdit(field: EditField) {
-    if (field === 'phone') setInputVal('');
     if (field === 'nickname') setInputVal(nickname);
     if (field === 'avatar') setTempAvatar(avatar);
     if (field === 'password') { setPwdNew(''); setPwdConfirm(''); }
@@ -74,12 +76,6 @@ export default function ProfileInfo() {
         if (editField === 'avatar') setAvatar(tempAvatar);
       }
 
-      if (editField === 'phone') {
-        const { error } = await supabase.auth.updateUser({ phone: inputVal });
-        if (error) throw error;
-        setPhone(inputVal.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'));
-      }
-
       if (editField === 'password') {
         if (pwdNew !== pwdConfirm) throw new Error('两次密码不一致');
         if (pwdNew.length < 6) throw new Error('密码至少 6 位');
@@ -97,7 +93,7 @@ export default function ProfileInfo() {
   }
 
   const fieldTitle: Record<NonNullable<EditField>, string> = {
-    phone: '修改手机号', nickname: '修改昵称', avatar: '选择头像', password: '修改密码',
+    nickname: '修改昵称', avatar: '选择头像', password: '修改密码',
   };
 
   return (
@@ -142,14 +138,6 @@ export default function ProfileInfo() {
             <span className="text-[15px] text-gray-900">{userId || '—'}</span>
           </div>
 
-          <button onClick={() => openEdit('phone')} className="flex w-full items-center justify-between px-4 py-4 border-b border-gray-100">
-            <span className="text-[15px] text-gray-500">手机号</span>
-            <div className="flex items-center gap-2">
-              <span className={`text-[15px] ${phone ? 'text-gray-900' : 'text-gray-300'}`}>{phone || '未绑定'}</span>
-              <ChevronRight size={18} className="text-gray-300" />
-            </div>
-          </button>
-
           <button onClick={() => openEdit('password')} className="flex w-full items-center justify-between px-4 py-4">
             <span className="text-[15px] text-gray-500">登录密码</span>
             <div className="flex items-center gap-2">
@@ -184,12 +172,12 @@ export default function ProfileInfo() {
               </div>
             )}
 
-            {(editField === 'phone' || editField === 'nickname') && (
+            {editField === 'nickname' && (
               <input
-                type={editField === 'phone' ? 'tel' : 'text'}
+                type="text"
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value)}
-                placeholder={editField === 'phone' ? '请输入新手机号' : '请输入新昵称'}
+                placeholder="请输入新昵称"
                 className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-[15px] placeholder:text-gray-300 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100"
               />
             )}
