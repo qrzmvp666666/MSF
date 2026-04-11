@@ -247,10 +247,16 @@ export default function Detail() {
                     <button 
                       onClick={handleRedeem}
                       disabled={isRedeeming}
-                      className="absolute right-1 top-1 bottom-1 px-4 bg-gray-900 text-white rounded-full text-sm font-medium whitespace-nowrap active:bg-gray-800 disabled:opacity-50"
+                      className="absolute right-1 top-1 bottom-1 px-4 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white rounded-full text-sm font-medium whitespace-nowrap active:scale-[0.98] disabled:opacity-50 transition-all shadow-sm"
                     >
                       {isRedeeming ? '...' : '兑换'}
                     </button>
+                  </div>
+
+                  <div className="flex items-center w-full max-w-xs my-2">
+                    <div className="flex-1 border-t border-gray-200"></div>
+                    <span className="px-3 text-xs text-gray-400 font-medium tracking-widest uppercase">或者</span>
+                    <div className="flex-1 border-t border-gray-200"></div>
                   </div>
 
                   <button 
