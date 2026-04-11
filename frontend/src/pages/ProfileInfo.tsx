@@ -50,13 +50,6 @@ export default function ProfileInfo() {
             </div>
           </div>
         </div>
-
-        <div className="mt-4 rounded-2xl bg-white px-4 py-4 shadow-sm border border-gray-100">
-          <div className="text-sm font-medium text-gray-900">安全说明</div>
-          <p className="mt-2 text-sm leading-6 text-gray-500">
-            为保护账户安全，密码仅支持修改，不会以明文形式展示在页面中。后续可接入 Supabase Auth 的重置密码流程。
-          </p>
-        </div>
       </div>
     </div>
   );
