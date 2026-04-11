@@ -48,9 +48,7 @@ const RichTextEditor = memo(({ initialContent, onChange }: { initialContent: str
       <div className="flex flex-wrap gap-2 border-b pb-2">
         <button onClick={() => editor.chain().focus().toggleBold().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive('bold') ? 'bg-gray-200' : 'bg-gray-100 hover:bg-gray-200'}`}>加粗</button>
         <button onClick={() => editor.chain().focus().toggleItalic().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive('italic') ? 'bg-gray-200' : 'bg-gray-100 hover:bg-gray-200'}`}>斜体</button>
-        <button onClick={() => editor.chain().focus().toggleStrike().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive('strike') ? 'bg-gray-200' : 'bg-gray-100 hover:bg-gray-200'}`}>删除线</button>
         <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={`px-2 py-1 text-xs rounded ${editor.isActive('heading', { level: 2 }) ? 'bg-gray-200' : 'bg-gray-100 hover:bg-gray-200'}`}>H2</button>
-        <button onClick={() => editor.chain().focus().toggleBulletList().run()} className={`px-2 py-1 text-xs rounded ${editor.isActive('bulletList') ? 'bg-gray-200' : 'bg-gray-100 hover:bg-gray-200'}`}>列表</button>
       </div>
       <EditorContent editor={editor} />
     </div>
@@ -269,9 +267,13 @@ export default function Admin() {
               <input
                 type="text"
                 value={account}
-                onChange={(e) => setAccount(e.target.value.replace(/[^a-zA-Z0-9_@.]/g, ''))}
+                onChange={(e) => setAccount(e.target.value.trim())}
                 placeholder="请输入管理员账号"
                 className="flex-1 bg-transparent text-[15px] text-gray-900 placeholder:text-gray-300 focus:outline-none"
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck="false"
               />
             </div>
           </div>

@@ -84,9 +84,13 @@ export default function Login({ isModal = false, onSuccess }: { isModal?: boolea
             <input
               type="text"
               value={account}
-              onChange={(e) => setAccount(e.target.value.replace(/[^a-zA-Z0-9_@.]/g, ''))}
+              onChange={(e) => setAccount(e.target.value.trim())}
               placeholder="请输入账号 (字母或数字)"
               className="flex-1 bg-transparent text-[15px] text-gray-900 placeholder:text-gray-300 focus:outline-none"
+              autoComplete="off"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck="false"
             />
           </div>
         </div>
