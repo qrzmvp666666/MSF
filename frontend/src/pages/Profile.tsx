@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MessageSquare, ShieldCheck, Headphones, ChevronRight, FileText, History } from 'lucide-react';
+import { MessageSquare, Headphones, ChevronRight, FileText, History } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function Profile() {
@@ -111,8 +111,8 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Item 2 */}
-            <div className="bg-white rounded-xl p-4 flex items-center shadow-sm">
+            {/* 投诉 */}
+            <div onClick={() => navigate('/complaint')} className="bg-white rounded-xl p-4 flex items-center shadow-sm cursor-pointer active:bg-gray-50">
               <div className="flex-1">
                 <h4 className="font-medium text-gray-800 text-base mb-1">投诉</h4>
                 <p className="text-xs text-gray-400">全程贴心伴您行</p>
@@ -122,18 +122,7 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Item 3 */}
-            <div className="bg-white rounded-xl p-4 flex items-center shadow-sm">
-              <div className="flex-1">
-                <h4 className="font-medium text-gray-800 text-base mb-1">隐私协议</h4>
-                <p className="text-xs text-gray-400">全心守护您隐私</p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
-                <ShieldCheck className="text-red-400" size={20} />
-              </div>
-            </div>
-
-            {/* Item 4 */}
+            {/* 客服 */}
             <div className="bg-white rounded-xl p-4 flex items-center shadow-sm">
               <div className="flex-1">
                 <h4 className="font-medium text-gray-800 text-base mb-1">联系客服</h4>

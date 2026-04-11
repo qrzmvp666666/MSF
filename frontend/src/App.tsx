@@ -6,6 +6,8 @@ import ProfileInfo from './pages/ProfileInfo';
 import Orders from './pages/Orders';
 import Login from './pages/Login';
 import Admin from './pages/Admin';
+import Complaint from './pages/Complaint';
+import ComplaintRecords from './pages/ComplaintRecords';
 import { Home as HomeIcon, FileText, User } from 'lucide-react';
 
 export default function App() {
@@ -31,6 +33,8 @@ function AppShell() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/info" element={<ProfileInfo />} />
         <Route path="/orders" element={<Orders />} />
+        <Route path="/complaint" element={<Complaint />} />
+        <Route path="/complaint-records" element={<ComplaintRecords />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {!isLogin && <BottomNav />}
@@ -41,7 +45,7 @@ function AppShell() {
 function BottomNav() {
   const location = useLocation();
   const path = location.pathname;
-  if (path.startsWith('/detail') || path === '/profile/info' || path === '/admin') return null;
+  if (path.startsWith('/detail') || path === '/profile/info' || path === '/admin' || path === '/complaint' || path === '/complaint-records') return null;
 
   return (
     <div className="fixed bottom-0 w-full max-w-md bg-white border-t flex justify-around items-center h-16 text-xs z-50">
