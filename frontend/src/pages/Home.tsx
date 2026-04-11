@@ -68,9 +68,9 @@ export default function Home() {
             <div className="flex justify-between items-center mb-3">
               <div className="flex items-center">
                 <div className="w-10 h-10 rounded-full bg-orange-100 overflow-hidden flex items-center justify-center mr-2 shadow-sm border border-white/20">
-                  <span className="text-xl">🧑‍🦲</span>
+                  <span className="text-xl">🎁</span>
                 </div>
-                <span className="font-medium text-lg tracking-wide">六叔猛料</span>
+                <span className="font-medium text-lg tracking-wide">广聚天下</span>
               </div>
               <button className="flex items-center space-x-1 bg-white/20 hover:bg-white/30 rounded-full px-3 py-1.5 text-[13px] font-medium backdrop-blur-sm border border-white/30 transition-colors">
                 <AlertCircle size={15} />

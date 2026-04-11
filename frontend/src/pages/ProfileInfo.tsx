@@ -146,6 +146,17 @@ export default function ProfileInfo() {
             </div>
           </button>
         </div>
+        
+        {/* 退出登录 */}
+        <button 
+          onClick={async () => {
+            await supabase.auth.signOut();
+            navigate('/login');
+          }}
+          className="mt-6 flex w-full items-center justify-center rounded-2xl bg-white py-3.5 text-[15px] font-medium text-red-500 shadow-sm"
+        >
+          退出登录
+        </button>
       </div>
 
       {/* Edit Bottom Sheet */}

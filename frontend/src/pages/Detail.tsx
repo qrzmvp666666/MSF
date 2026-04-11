@@ -112,9 +112,9 @@ export default function Detail() {
         {/* Author info */}
         <div className="flex items-center mb-4">
           <div className="w-10 h-10 rounded-full bg-orange-200 overflow-hidden flex items-center justify-center mr-3">
-             <span className="text-xl">🧑‍🦲</span>
+             <span className="text-xl">🎁</span>
           </div>
-          <span className="font-medium text-gray-800 text-lg">六叔猛料</span>
+          <span className="font-medium text-gray-800 text-lg">广聚天下</span>
         </div>
 
         {/* Notice */}
