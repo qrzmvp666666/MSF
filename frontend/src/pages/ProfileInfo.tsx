@@ -1,8 +1,26 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+type EditField = 'phone' | 'email' | null;
 
 export default function ProfileInfo() {
   const navigate = useNavigate();
+  const [editField, setEditField] = useState<EditField>(null);
+  const [phone, setPhone] = useState('138****8888');
+  const [email, setEmail] = useState('');
+  const [inputVal, setInputVal] = useState('');
+
+  function openEdit(field: EditField) {
+    setInputVal(field === 'phone' ? phone : email);
+    setEditField(field);
+  }
+
+  function confirmEdit() {
+    if (editField === 'phone') setPhone(inputVal);
+    if (editField === 'email') setEmail(inputVal);
+    setEditField(null);
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -35,9 +53,25 @@ export default function ProfileInfo() {
           </div>
 
           <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
-            <span className="text-[15px] text-gray-500">手机号</span>
-            <span className="text-[15px] text-gray-900">138****8888</span>
+            <span className="text-[15px] text-gray-500">用户ID</span>
+            <span className="text-[15px] text-gray-900">34203759</span>
           </div>
+
+          <button onClick={() => openEdit('phone')} className="flex w-full items-center justify-between px-4 py-4 border-b border-gray-100">
+            <span className="text-[15px] text-gray-500">手机号</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[15px] text-gray-900">{phone}</span>
+              <ChevronRight size={18} className="text-gray-300" />
+            </div>
+          </button>
+
+          <button onClick={() => openEdit('email')} className="flex w-full items-center justify-between px-4 py-4 border-b border-gray-100">
+            <span className="text-[15px] text-gray-500">邮箱</span>
+            <div className="flex items-center gap-2">
+              <span className={`text-[15px] ${email ? 'text-gray-900' : 'text-gray-300'}`}>{email || '未绑定'}</span>
+              <ChevronRight size={18} className="text-gray-300" />
+            </div>
+          </button>
 
           <div className="flex items-center justify-between px-4 py-4">
             <div>
@@ -51,6 +85,38 @@ export default function ProfileInfo() {
           </div>
         </div>
       </div>
+
+      {/* Edit Bottom Sheet */}
+      {editField && (
+        <>
+          <div className="fixed inset-0 bg-black/40 z-[60]" onClick={() => setEditField(null)} />
+          <div className="fixed bottom-0 left-0 w-full max-w-md z-[70] rounded-t-[24px] bg-white px-5 pt-4 pb-10">
+            <div className="relative mb-5 flex items-center justify-between">
+              <h3 className="text-[17px] font-bold text-gray-900">
+                修改{editField === 'phone' ? '手机号' : '邮箱'}
+              </h3>
+              <button onClick={() => setEditField(null)} className="flex h-9 w-9 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100">
+                <X size={22} />
+              </button>
+            </div>
+
+            <input
+              type={editField === 'phone' ? 'tel' : 'email'}
+              value={inputVal}
+              onChange={(e) => setInputVal(e.target.value)}
+              placeholder={editField === 'phone' ? '请输入手机号' : '请输入邮箱地址'}
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-[15px] text-gray-900 placeholder:text-gray-300 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100"
+            />
+
+            <button
+              onClick={confirmEdit}
+              className="mt-5 w-full rounded-full bg-gradient-to-r from-red-500 to-red-400 py-3.5 text-[16px] font-bold text-white shadow-[0_8px_20px_rgba(255,77,79,0.25)]"
+            >
+              确认修改
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
