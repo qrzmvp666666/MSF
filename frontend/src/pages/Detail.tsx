@@ -45,7 +45,7 @@ export default function Detail() {
           <div className="bg-white rounded-xl shadow-sm p-4 text-sm border border-gray-100">
             <div className="mb-4">
               <p className="font-medium text-gray-700 mb-2">第100期 新澳 16码 连红稳吃肉</p>
-              <div className="flex flex-col space-y-1 text-red-500 font-medium ml-2">
+              <div className="flex flex-wrap gap-x-5 gap-y-2 text-red-500 font-medium ml-2 mt-3 text-[15px]">
                 <span>龙</span>
                 <span>马</span>
                 <span>鸡</span>
@@ -55,7 +55,7 @@ export default function Detail() {
             
             <div className="border-t border-gray-100 pt-4 mt-2 mb-4">
               <p className="font-medium text-gray-700 mb-2">第099期 新澳 16码 连红稳吃肉</p>
-              <div className="flex flex-col space-y-1 text-red-500 font-medium ml-2">
+              <div className="flex flex-wrap gap-x-5 gap-y-2 text-red-500 font-medium ml-2 mt-3 text-[15px]">
                 <span>猪</span>
               </div>
             </div>
@@ -63,19 +63,24 @@ export default function Detail() {
         </div>
       </div>
 
-      {/* Floating Action Bar */}
-      <div className="fixed bottom-0 w-full max-w-md bg-white border-t p-3 flex justify-between items-center z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-        <div className="text-gray-700 font-medium">
-          打赏价格: <span className="text-red-500 font-bold text-lg">288.00</span>
-        </div>
-        <button className="bg-gradient-to-r from-red-400 to-red-600 text-white font-medium px-8 py-2.5 rounded-full shadow-md">
-          打赏解锁
-        </button>
+      {/* Floating Red Return Button */}
+      <div 
+        onClick={() => navigate(-1)}
+        className="fixed right-3 bottom-24 w-12 h-12 bg-white/95 rounded-full flex items-center justify-center border-2 border-red-400 shadow-[0_2px_12px_rgba(239,68,68,0.25)] z-40 cursor-pointer hover:bg-red-50 transition-colors backdrop-blur-[2px]"
+      >
+        <span className="text-red-500 font-medium text-[13px] tracking-wider ml-0.5">返回</span>
       </div>
 
-      {/* Floating Red Return Button */}
-      <div className="fixed right-4 bottom-24 w-12 h-12 bg-red-50 rounded-full flex items-center justify-center border-2 border-red-500 shadow-sm opacity-80">
-        <span className="text-red-500 font-bold text-sm">返回</span>
+      {/* Floating Action Bar */}
+      <div className="fixed bottom-6 left-0 w-full max-w-md z-50 px-4">
+        <div className="bg-[#fdf4cd] rounded-full flex items-center justify-between pl-5 pr-1 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.1)] border border-[#fbe8b5]">
+          <div className="text-[#9d5c36] font-bold text-[17px] tracking-wide flex-1">
+            打赏价格: 288.00
+          </div>
+          <button className="bg-gradient-to-r from-[#ff6b57] to-[#ff4141] hover:opacity-95 text-white font-bold text-[16px] px-8 py-3 rounded-full shadow-md transition-opacity">
+            打赏解锁
+          </button>
+        </div>
       </div>
     </div>
   );
