@@ -1,11 +1,38 @@
-import { ChevronLeft, MoreHorizontal, Gift } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronLeft, MoreHorizontal, Gift, X, CheckCircle2, Circle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Detail() {
   const navigate = useNavigate();
+  const [showPaymentSheet, setShowPaymentSheet] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'wechat' | 'alipay' | 'star-card'>('wechat');
+
+  const paymentOptions = [
+    {
+      key: 'wechat' as const,
+      label: '微信支付',
+      hint: '推荐（到账更快）',
+      icon: '微',
+      iconClassName: 'bg-[#07c160] text-white',
+    },
+    {
+      key: 'alipay' as const,
+      label: '支付宝支付',
+      hint: '推荐（付款优惠9.95折）',
+      icon: '支',
+      iconClassName: 'bg-[#1698ff] text-white',
+    },
+    {
+      key: 'star-card' as const,
+      label: '星卡支付',
+      hint: '账户余额：¥ 0.00',
+      icon: '星',
+      iconClassName: 'bg-[#ff5a5f] text-white',
+    },
+  ];
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-20">
+    <div className="bg-gray-50 min-h-screen pb-20 relative">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-white sticky top-0 z-10">
         <ChevronLeft size={24} className="text-gray-600" onClick={() => navigate(-1)} />
@@ -77,11 +104,77 @@ export default function Detail() {
           <div className="text-[#9d5c36] font-bold text-[17px] tracking-wide flex-1">
             打赏价格: 288.00
           </div>
-          <button className="bg-gradient-to-r from-[#ff6b57] to-[#ff4141] hover:opacity-95 text-white font-bold text-[16px] px-8 py-3 rounded-full shadow-md transition-opacity">
+          <button
+            onClick={() => setShowPaymentSheet(true)}
+            className="bg-gradient-to-r from-[#ff6b57] to-[#ff4141] hover:opacity-95 text-white font-bold text-[16px] px-8 py-3 rounded-full shadow-md transition-opacity"
+          >
             打赏解锁
           </button>
         </div>
       </div>
+
+      {showPaymentSheet && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 z-[60] backdrop-blur-[1px]"
+            onClick={() => setShowPaymentSheet(false)}
+          />
+          <div className="fixed bottom-0 left-0 w-full max-w-md z-[70] rounded-t-[26px] bg-[#fbfbfd] px-5 pt-3 pb-8 shadow-[0_-16px_50px_rgba(0,0,0,0.18)] animate-[slideUp_0.2s_ease-out]">
+            <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-gray-200" />
+
+            <div className="relative mb-5">
+              <h3 className="text-center text-[18px] font-bold tracking-wide text-gray-900">选择赞赏方式</h3>
+              <button
+                onClick={() => setShowPaymentSheet(false)}
+                className="absolute right-0 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+              >
+                <X size={26} strokeWidth={1.75} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {paymentOptions.map((option) => {
+                const selected = paymentMethod === option.key;
+
+                return (
+                  <button
+                    key={option.key}
+                    onClick={() => setPaymentMethod(option.key)}
+                    className={`flex w-full items-center rounded-[22px] px-5 py-5 transition-all ${
+                      selected
+                        ? 'bg-white border border-[#ffd7d9] shadow-[0_10px_28px_rgba(255,90,95,0.12)]'
+                        : 'bg-white border border-[#f1f2f5] shadow-[0_6px_20px_rgba(15,23,42,0.05)]'
+                    }`}
+                  >
+                    <div className={`mr-4 flex h-12 w-12 items-center justify-center rounded-2xl text-lg font-bold shadow-sm ${option.iconClassName}`}>
+                      {option.icon}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="text-[17px] font-medium tracking-wide text-gray-900">{option.label}</div>
+                      <div className={`mt-1 text-[13px] leading-none ${option.key === 'star-card' ? 'text-gray-400' : 'text-[#ff5a5f]'}`}>
+                        {option.key === 'star-card' ? '用户余额：' : option.hint}
+                        {option.key === 'star-card' && (
+                          <>
+                            <span className="ml-1 text-[#ff5a5f]">¥ 0.00</span>
+                            <span className="ml-3 font-medium underline underline-offset-2 text-[#ff5a5f]">去充值</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="ml-4 text-[#ff4d4f]">
+                      {selected ? <CheckCircle2 size={24} fill="currentColor" className="text-[#ff4d4f]" /> : <Circle size={24} className="text-[#e5e7eb]" />}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button className="mt-7 w-full rounded-full bg-gradient-to-r from-[#ff5b5b] via-[#ff4b51] to-[#ff3d45] py-4 text-[18px] font-bold tracking-wide text-white shadow-[0_12px_30px_rgba(255,77,79,0.32)] transition-transform active:scale-[0.99]">
+              ¥ 288.00 确定打赏
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
