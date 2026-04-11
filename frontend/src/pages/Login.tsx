@@ -94,18 +94,18 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-white flex flex-col select-none">
       {/* 顶部渐变区域 */}
-      <div className="relative bg-gradient-to-br from-red-500 via-red-500 to-orange-400 h-56 flex flex-col items-center justify-end pb-8 overflow-hidden">
+      <div className="relative bg-gradient-to-br from-red-500 via-red-500 to-orange-400 h-72 flex flex-col items-center justify-center overflow-hidden">
         {/* 装饰圆 */}
         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10" />
         <div className="absolute -top-4 -left-8 w-28 h-28 rounded-full bg-white/10" />
-        <div className="absolute bottom-0 left-0 right-0 h-8 bg-white rounded-t-[32px]" />
+        <div className="absolute bottom-0 left-0 right-0 h-10 bg-white rounded-t-[32px]" />
         {/* Logo & Slogan */}
-        <div className="relative z-10 flex flex-col items-center">
-          <div className="mb-1 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm shadow-inner">
-            <span className="text-2xl">🔥</span>
+        <div className="relative z-10 flex flex-col items-center mb-8">
+          <div className="mb-1 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/20 backdrop-blur-sm shadow-inner">
+            <span className="text-3xl">🔥</span>
           </div>
-          <div className="mt-3 text-2xl font-bold tracking-widest text-white">猛料平台</div>
-          <div className="mt-1 text-xs text-red-100">专业内容 · 精准分析</div>
+          <div className="mt-4 text-[26px] font-bold tracking-widest text-white">猛料平台</div>
+          <div className="mt-1.5 text-sm text-red-100">专业内容 · 精准分析</div>
         </div>
       </div>
 
