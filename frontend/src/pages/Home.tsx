@@ -2,6 +2,8 @@ import { X, Search, Volume2, MoreHorizontal, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Home() {
+  const noticeText = '义务，相关责任由内容提供者自行承担。3、平台仅提供信息展示服务。所有文字、图片仅供参考，请谨慎判断，自愿下单购买。购买即视为同意相关协议内容，平台不承诺连续性及准确性。';
+
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
@@ -41,9 +43,16 @@ export default function Home() {
         </div>
 
         {/* Announcement */}
-        <div className="bg-white rounded-lg p-3 flex items-center text-sm text-gray-600 mb-4 shadow-sm">
+        <div className="bg-white rounded-xl px-3 py-3 flex items-center text-sm text-gray-600 mb-4 shadow-sm border border-gray-100">
           <Volume2 size={18} className="text-orange-500 mr-2 flex-shrink-0" />
-          <p className="truncate">义务，相关责任由内容提供者自行承担。 3、平...</p>
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <div className="notice-marquee">
+              <div className="notice-marquee-track">
+                <span className="notice-marquee-text">{noticeText}</span>
+                <span className="notice-marquee-text" aria-hidden="true">{noticeText}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Tabs */}

@@ -3,3 +3,34 @@
 @tailwind utilities;
 
 body { background-color: #f7f8fa; margin: 0; padding: 0; }
+
+.notice-marquee {
+	position: relative;
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+.notice-marquee-track {
+	display: inline-flex;
+	align-items: center;
+	min-width: max-content;
+	animation: notice-marquee-scroll 18s linear infinite;
+	will-change: transform;
+}
+
+.notice-marquee-text {
+	display: inline-block;
+	padding-right: 48px;
+	font-size: 15px;
+	color: #5f6775;
+}
+
+@keyframes notice-marquee-scroll {
+	0% {
+		transform: translateX(0);
+	}
+
+	100% {
+		transform: translateX(-50%);
+	}
+}

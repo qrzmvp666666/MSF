@@ -1,7 +1,9 @@
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Detail from './pages/Detail';
 import Profile from './pages/Profile';
+import ProfileInfo from './pages/ProfileInfo';
+import Orders from './pages/Orders';
 import { Home as HomeIcon, FileText, User } from 'lucide-react';
 
 export default function App() {
@@ -12,6 +14,9 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/detail" element={<Detail />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/info" element={<ProfileInfo />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <BottomNav />
       </div>
@@ -22,7 +27,7 @@ export default function App() {
 function BottomNav() {
   const location = useLocation();
   const path = location.pathname;
-  if (path === '/detail') return null;
+  if (path === '/detail' || path === '/profile/info') return null;
 
   return (
     <div className="fixed bottom-0 w-full max-w-md bg-white border-t flex justify-around items-center h-16 text-xs z-50">

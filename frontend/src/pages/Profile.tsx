@@ -1,4 +1,5 @@
-import { X, MoreHorizontal, Eye, MessageSquare, ShieldCheck, Headphones, Wallet } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { X, MoreHorizontal, Eye, MessageSquare, ShieldCheck, Headphones, Wallet, ChevronRight } from 'lucide-react';
 
 export default function Profile() {
   return (
@@ -12,18 +13,23 @@ export default function Profile() {
 
       <div className="px-4 py-4">
         {/* User Info */}
-        <div className="flex items-center mb-6">
-          <div className="w-14 h-14 rounded-full bg-blue-100 overflow-hidden flex items-center justify-center mr-4 border border-gray-100">
-             <span className="text-2xl">👨‍💼</span>
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">永丰机械</h2>
-            <div className="flex items-center mt-1">
-              <span className="bg-red-50 text-red-500 text-xs px-2 py-0.5 rounded mr-2 border border-red-100">SVIP</span>
-              <span className="text-gray-500 text-sm">34203759</span>
+        <Link to="/profile/info" className="mb-6 flex items-center justify-between rounded-2xl transition-colors hover:bg-white/60">
+          <div className="flex items-center">
+            <div className="w-14 h-14 rounded-full bg-blue-100 overflow-hidden flex items-center justify-center mr-4 border border-gray-100">
+               <span className="text-2xl">👨‍💼</span>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-800">永丰机械</h2>
+              <div className="flex items-center mt-1">
+                <span className="bg-red-50 text-red-500 text-xs px-2 py-0.5 rounded mr-2 border border-red-100">SVIP</span>
+                <span className="text-gray-500 text-sm">34203759</span>
+              </div>
             </div>
           </div>
-        </div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm border border-gray-100">
+            <ChevronRight size={20} className="text-gray-400" />
+          </div>
+        </Link>
 
         {/* Balance Card */}
         <div className="bg-gradient-to-r from-red-400 to-red-600 rounded-2xl p-5 text-white mb-6 shadow-md relative overflow-hidden">
