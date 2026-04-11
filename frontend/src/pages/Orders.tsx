@@ -1,32 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { MoreHorizontal, ReceiptText, RefreshCw, Loader2 } from 'lucide-react';
+import { ReceiptText, RefreshCw, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-
-// 模拟的订单列表数据
-const mockOrders = [
-  {
-    id: 'ORD-20260411-001',
-    planName: '年度终极套餐',
-    amount: '199.00',
-    status: '处理中',
-    date: '2026-04-11 10:23:45',
-  },
-  {
-    id: 'ORD-20260410-002',
-    planName: '季度尊享套餐',
-    amount: '59.00',
-    status: '已支付',
-    date: '2026-04-10 14:15:22',
-  },
-  {
-    id: 'ORD-20260408-003',
-    planName: '单月体验套餐',
-    amount: '19.90',
-    status: '已关闭',
-    date: '2026-04-08 09:30:11',
-  }
-];
 
 export default function Orders() {
   const [searchParams] = useSearchParams();
@@ -34,16 +9,41 @@ export default function Orders() {
   const [activeTab, setActiveTab] = useState<'orders' | 'exchange'>(initialTab);
 
   const [exchangeRecords, setExchangeRecords] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-
-  // 这里的订单记录可后续再接入数据库，目前保持现状（mock 数据）
-  const hasOrders = mockOrders && mockOrders.length > 0;
 
   useEffect(() => {
     if (activeTab === 'exchange') {
       fetchExchangeRecords();
+    } else {
+      fetchOrders();
     }
   }, [activeTab]);
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setOrders([]);
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('purchase_records')
+        .select('*')
+        .eq('auth_user_id', user.id)
+        .order('created_at', { ascending: false });
+        
+      if (!error && data) {
+        setOrders(data);
+      }
+    } catch (e) {
+      console.error('获取订单记录失败：', e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchExchangeRecords = async () => {
     setLoading(true);
@@ -93,27 +93,35 @@ export default function Orders() {
       <div className="px-4 py-1">
         {activeTab === 'orders' ? (
           /* ================= 订单记录内容 ================= */
-          hasOrders ? (
+          loading ? (
+             <div className="py-20 flex justify-center text-gray-400">
+               <Loader2 className="animate-spin" size={28} />
+             </div>
+          ) : orders && orders.length > 0 ? (
             <div className="space-y-3">
-              {mockOrders.map((order) => (
+              {orders.map((order) => (
                 <div key={order.id} className="rounded-xl bg-white p-4 shadow-sm border border-gray-100">
                   <div className="flex items-center justify-between border-b border-gray-50 pb-2 mb-2">
-                    <h3 className="text-base font-medium text-gray-800">{order.planName}</h3>
+                    <h3 className="text-base font-medium text-gray-800">{order.product_name || order.planName || '订阅套餐'}</h3>
                     <span className={`text-xs font-medium ${
-                      order.status === '已支付' ? 'text-green-500' : 
-                      order.status === '处理中' ? 'text-blue-500' : 
+                      order.payment_status === 'paid' ? 'text-green-500' : 
+                      order.payment_status === 'pending' ? 'text-blue-500' : 
                       'text-gray-400'
                     }`}>
-                      {order.status}
+                      {order.payment_status === 'paid' ? '已支付' : 
+                       order.payment_status === 'pending' ? '处理中' : 
+                       order.payment_status === 'failed' ? '支付失败' :
+                       order.payment_status === 'refunded' ? '已退款' :
+                       order.payment_status === 'cancelled' ? '已取消' : order.payment_status}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-xs text-gray-500 block">订单号: {order.id}</span>
-                      <p className="mt-1 text-xs text-gray-400">{order.date}</p>
+                      <span className="text-xs text-gray-500 block">订单号: {order.order_no || order.id}</span>
+                      <p className="mt-1 text-xs text-gray-400">{new Date(order.created_at).toLocaleString('zh-CN')}</p>
                     </div>
                     <div className="text-right flex items-end">
-                      <span className="text-lg font-bold text-gray-800">¥{order.amount}</span>
+                      <span className="text-lg font-bold text-gray-800">¥{Number(order.amount).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -125,9 +133,6 @@ export default function Orders() {
                 <ReceiptText className="text-red-400" size={28} />
               </div>
               <div className="mt-4 text-lg font-semibold text-gray-800">暂无订单记录</div>
-              <p className="mt-2 text-sm leading-6 text-gray-400">
-                您当前还没有购买记录，后续接入 Supabase 后可在这里展示打赏订单和支付状态。
-              </p>
             </div>
           )
         ) : (
@@ -172,9 +177,6 @@ export default function Orders() {
                 <RefreshCw className="text-purple-400" size={28} />
               </div>
               <div className="mt-4 text-lg font-semibold text-gray-800">暂无兑换记录</div>
-              <p className="mt-2 text-sm leading-6 text-gray-400">
-                您当前没有任何兑换操作记录。
-              </p>
             </div>
           )
         )}

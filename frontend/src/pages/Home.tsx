@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Search, Volume2, MoreHorizontal, AlertCircle } from 'lucide-react';
+import { Search, Volume2, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 

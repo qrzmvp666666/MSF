@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { X, MoreHorizontal, Eye, MessageSquare, ShieldCheck, Headphones, Wallet, ChevronRight, FileText, History } from 'lucide-react';
+import { MessageSquare, ShieldCheck, Headphones, ChevronRight, FileText, History } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function Profile() {
