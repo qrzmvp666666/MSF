@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { ArrowLeft, Plus, Edit2, Trash2, Check, User, Lock, Loader2 } from 'lucide-react';
@@ -21,18 +21,23 @@ interface Material {
   records: Record[];
 }
 
-const RichTextEditor = ({ content, onChange }: { content: string, onChange: (val: string) => void }) => {
+const extensions = [StarterKit];
+
+const editorProps = {
+  attributes: {
+    class: 'prose prose-sm sm:prose-base focus:outline-none min-h-[150px] border border-gray-200 rounded-md p-3 bg-white',
+  },
+};
+
+const RichTextEditor = memo(({ initialContent, onChange }: { initialContent: string, onChange: (val: string) => void }) => {
+  const [content] = useState(initialContent);
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions,
     content,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm sm:prose-base focus:outline-none min-h-[150px] border border-gray-200 rounded-md p-3 bg-white',
-      },
-    },
+    editorProps,
   });
 
   if (!editor) return null;
@@ -49,7 +54,9 @@ const RichTextEditor = ({ content, onChange }: { content: string, onChange: (val
       <EditorContent editor={editor} />
     </div>
   );
-};
+}, () => true); // 永远跳过 React 的外部重渲染，避免打断输入法
+
+
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -184,6 +191,10 @@ export default function Admin() {
     });
   };
 
+  const handleContentChange = useCallback((val: string) => {
+    setEditingRecord(prev => prev ? { ...prev, content: val } : prev);
+  }, []);
+
   const handleDeleteRecord = async (id: string) => {
     if (confirm('确定要删除这条记录吗？')) {
       await supabase.from('records').delete().eq('id', id);
@@ -287,8 +298,9 @@ export default function Admin() {
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
             <label className="block text-sm font-medium text-gray-700 mb-1">连红结果 (富文本)</label>
             <RichTextEditor 
-              content={editingRecord.content} 
-              onChange={(val) => setEditingRecord({...editingRecord, content: val})} 
+              key={editingRecord.id}
+              initialContent={editingRecord.content} 
+              onChange={handleContentChange} 
             />
           </div>
         </div>
