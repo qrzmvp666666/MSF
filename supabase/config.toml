@@ -246,17 +246,17 @@ otp_expiry = 3600
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.
-enable_signup = true
+enable_signup = false
 # If enabled, users need to confirm their phone number before signing in.
-enable_confirmations = true
+enable_confirmations = false
 # Template for sending OTP to users
 template = "Your code is {{ .Code }}"
 # Controls the minimum amount of time that must pass before sending another sms otp.
 max_frequency = "5s"
 
-[auth.hook.send_sms]
-enabled = true
-uri = "http://host.docker.internal:54321/functions/v1/send-sms"
+# [auth.hook.send_sms]
+# enabled = true
+# uri = "http://host.docker.internal:54321/functions/v1/send-sms"
 # secrets = "env(SEND_SMS_HOOK_SECRET)"
 
 # Use pre-defined map of phone number to OTP for testing.

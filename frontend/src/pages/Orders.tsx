@@ -46,7 +46,7 @@ export default function Orders() {
             {mockOrders.map((order) => (
               <div key={order.id} className="rounded-xl bg-white p-4 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between border-b border-gray-50 pb-2 mb-2">
-                  <span className="text-xs text-gray-500">订单号: {order.id}</span>
+                  <h3 className="text-base font-medium text-gray-800">{order.planName}</h3>
                   <span className={`text-xs font-medium ${
                     order.status === '已支付' ? 'text-green-500' : 
                     order.status === '处理中' ? 'text-blue-500' : 
@@ -57,10 +57,10 @@ export default function Orders() {
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-base font-medium text-gray-800">{order.planName}</h3>
+                    <span className="text-xs text-gray-500 block">订单号: {order.id}</span>
                     <p className="mt-1 text-xs text-gray-400">{order.date}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex items-end">
                     <span className="text-lg font-bold text-gray-800">¥{order.amount}</span>
                   </div>
                 </div>
