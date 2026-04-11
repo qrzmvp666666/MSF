@@ -1,7 +1,7 @@
 import { useState, useEffect, memo, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { ArrowLeft, Plus, Edit2, Trash2, Check, User, Lock, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Edit2, Trash2, Check, User, Lock, Loader2, Eye, EyeOff, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
@@ -63,6 +63,7 @@ export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
 
@@ -275,6 +276,15 @@ export default function Admin() {
                 autoCorrect="off"
                 spellCheck="false"
               />
+              {account && (
+                <button
+                  type="button"
+                  onClick={() => setAccount('')}
+                  className="text-gray-300 hover:text-gray-500 focus:outline-none"
+                >
+                  <XCircle size={16} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -282,12 +292,28 @@ export default function Admin() {
             <div className="flex items-center rounded-2xl border border-gray-100 bg-gray-50 px-4 py-4 gap-3 transition-colors focus-within:border-gray-300">
               <Lock size={18} className="text-gray-400 shrink-0" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="请输入密码"
                 className="flex-1 bg-transparent text-[15px] text-gray-900 placeholder:text-gray-300 focus:outline-none"
               />
+              {password && (
+                <button
+                  type="button"
+                  onClick={() => setPassword('')}
+                  className="text-gray-300 hover:text-gray-500 focus:outline-none"
+                >
+                  <XCircle size={16} />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-gray-400 hover:text-gray-600 focus:outline-none ml-1"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 
