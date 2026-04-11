@@ -12,7 +12,10 @@ export default function Profile() {
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        navigate('/login');
+        return;
+      }
       setUserId(user.id.slice(0, 8).toUpperCase());
 
       const fallbackNickname = user.email ? user.email.replace('@msf.local', '') : '未设置';
