@@ -17,7 +17,11 @@ export default function Login({ isModal = false, onSuccess }: { isModal?: boolea
   async function handleSubmit() {
     setError('');
     if (!account) {
-      setError('请输入账号');
+      setError('请输入手机号');
+      return;
+    }
+    if (!/^1[3-9]\d{9}$/.test(account)) {
+      setError('请输入正确的中国大陆手机号格式');
       return;
     }
     if (!password || password.length < 6) {
@@ -43,7 +47,7 @@ export default function Login({ isModal = false, onSuccess }: { isModal?: boolea
       });
 
       if (signInError) {
-        setError('登录失败: 账号或密码错误');
+        setError('登录失败: 手机号或密码错误');
         setLoading(false);
         return;
       }
@@ -55,7 +59,7 @@ export default function Login({ isModal = false, onSuccess }: { isModal?: boolea
         
       if (signUpError) {
         if (signUpError.message.includes('already registered')) {
-          setError('该账号已被注册，请直接登录');
+          setError('该手机号已被注册，请直接登录');
         } else {
           setError('注册失败: ' + signUpError.message);
         }
@@ -125,7 +129,7 @@ export default function Login({ isModal = false, onSuccess }: { isModal?: boolea
               type="text"
               value={account}
               onChange={(e) => setAccount(e.target.value.trim())}
-              placeholder="请输入账号 (字母或数字)"
+              placeholder="请输入手机号"
               className="flex-1 bg-transparent text-[15px] text-gray-900 placeholder:text-gray-300 focus:outline-none"
               autoComplete="off"
               autoCapitalize="off"
