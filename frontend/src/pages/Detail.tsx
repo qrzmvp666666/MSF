@@ -1,15 +1,36 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Gift, X } from 'lucide-react';
+import { ChevronLeft, Gift, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import Login from './Login';
 
+const donateH5Url = import.meta.env.VITE_DONATE_H5_URL || '';
+
+function getUserPhone(session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']) {
+  const rawPhone = session?.user?.phone || session?.user?.email?.replace(/@msf\.local$/, '') || '';
+  return /^1[3-9]\d{9}$/.test(rawPhone) ? rawPhone : '';
+}
+
+function buildDonateUrl(phone: string) {
+  if (!donateH5Url) return '';
+
+  const url = donateH5Url.startsWith('http://') || donateH5Url.startsWith('https://')
+    ? new URL(donateH5Url)
+    : new URL(donateH5Url, window.location.origin);
+
+  if (phone) {
+    url.searchParams.set('phone', phone);
+  }
+
+  return url.toString();
+}
+
 export default function Detail() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const [showPaymentSheet, setShowPaymentSheet] = useState(false);
+  const [showDonateIframe, setShowDonateIframe] = useState(false);
+  const [donateIframeUrl, setDonateIframeUrl] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'alipay' | 'caibei'>('alipay');
   
   // 数据状态
   const [material, setMaterial] = useState<{ title: string, price: string, created_at: string } | null>(null);
@@ -155,25 +176,16 @@ export default function Detail() {
       setShowLoginModal(true);
       return;
     }
-    setShowPaymentSheet(true);
-  };
 
-  const paymentOptions = [
-    {
-      key: 'alipay' as const,
-      label: '支付宝支付',
-      hint: '推荐（付款优惠9.95折）',
-      icon: <span className="text-xl font-bold italic font-sans" style={{fontFamily: 'sans-serif'}}>支</span>,
-      iconClassName: 'bg-[#00a3fe] text-white',
-    },
-    {
-      key: 'caibei' as const,
-      label: '彩贝支付',
-      hint: '用户余额：',
-      icon: <Gift size={20} className="stroke-[2.5px]" />,
-      iconClassName: 'bg-[#ff4d4f] text-white',
-    },
-  ];
+    const nextUrl = buildDonateUrl(getUserPhone(session));
+    if (!nextUrl) {
+      alert('未配置打赏 H5 地址');
+      return;
+    }
+
+    setDonateIframeUrl(nextUrl);
+    setShowDonateIframe(true);
+  };
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20 relative">
@@ -325,76 +337,35 @@ export default function Detail() {
         </div>
       </div>
 
-      {showPaymentSheet && (
+      {showDonateIframe && (
         <>
           <div
             className="fixed inset-0 bg-black/40 z-[60] backdrop-blur-[1px]"
-            onClick={() => setShowPaymentSheet(false)}
+            onClick={() => setShowDonateIframe(false)}
           />
-          <div className="fixed bottom-0 left-0 w-full max-w-md z-[70] rounded-t-3xl bg-[#f7f8fa] pb-8 shadow-[0_-16px_50px_rgba(0,0,0,0.18)] animate-[slideUp_0.2s_ease-out]">
-            {/* Header */}
-            <div className="relative flex items-center justify-center pt-5 pb-4 bg-white rounded-t-3xl">
-              <h3 className="text-[17px] font-bold text-gray-900">选择赞赏方式</h3>
-              <button
-                onClick={() => setShowPaymentSheet(false)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 p-2"
-              >
-                <X size={22} strokeWidth={2} />
-              </button>
+          <div className="fixed inset-0 z-[70] bg-white animate-[slideUp_0.2s_ease-out]">
+            <button
+              onClick={() => setShowDonateIframe(false)}
+              className="absolute left-3 z-[80] flex h-10 w-10 items-center justify-center rounded-full bg-[#f5f7fb]/95 text-gray-700 shadow-[0_4px_12px_rgba(15,23,42,0.08)] ring-1 ring-black/5 backdrop-blur-[2px] transition-colors hover:bg-white"
+              style={{ top: 'calc(env(safe-area-inset-top, 0px) + 10px)' }}
+            >
+              <ChevronLeft size={22} strokeWidth={2.5} />
+            </button>
+            <div className="h-full bg-gray-50">
+              <iframe
+                key={donateIframeUrl}
+                src={donateIframeUrl}
+                title="打赏 H5 页面"
+                className="h-full w-full border-0 bg-white"
+                allow="payment *; clipboard-write"
+              />
             </div>
-
-            {/* Options */}
-            <div className="px-5 pt-5 space-y-4">
-              {paymentOptions.map((option) => {
-                const selected = paymentMethod === option.key;
-
-                return (
-                  <button
-                    key={option.key}
-                    onClick={() => setPaymentMethod(option.key)}
-                    className="flex w-full items-center rounded-[20px] bg-white px-5 py-4 transition-all"
-                  >
-                    <div className={`mr-4 flex h-10 w-10 items-center justify-center rounded-xl shadow-sm ${option.iconClassName}`}>
-                      {option.icon}
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="flex items-center">
-                        <span className="text-[16px] font-medium text-gray-900">{option.label}</span>
-                        {option.key === 'caibei' && (
-                          <span className="ml-2 text-[14px] text-[#ff4d4f] underline underline-offset-2">去充值</span>
-                        )}
-                      </div>
-                      
-                      {option.key === 'alipay' && (
-                        <div className="mt-1 text-[13px] text-[#ff4d4f]">
-                          {option.hint}
-                        </div>
-                      )}
-                      
-                      {option.key === 'caibei' && (
-                        <div className="mt-1 text-[13px] text-gray-400">
-                          {option.hint}<span className="text-[#ff4d4f]">￥0.00</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div 
-                      className="ml-4 flex items-center justify-center w-[22px] h-[22px] rounded-full border-2 transition-colors duration-200" 
-                      style={{ borderColor: selected ? '#ff4d4f' : '#f0f0f0' }}
-                    >
-                      {selected && <div className="w-2.5 h-2.5 rounded-full bg-[#ff4d4f]" />}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Footer button */}
-            <div className="px-5 mt-8">
-              <button className="w-full rounded-full bg-[#ff4d4f] py-[14px] text-[17px] font-medium text-white transition-opacity active:opacity-90 shadow-sm">
-                ￥ 288.00 确定打赏
-              </button>
-            </div>
+            <button
+              onClick={() => setShowDonateIframe(false)}
+              className="fixed right-3 bottom-24 z-[80] flex h-12 w-12 items-center justify-center rounded-full border-2 border-red-400 bg-white/95 shadow-[0_2px_12px_rgba(239,68,68,0.25)] backdrop-blur-[2px] transition-colors hover:bg-red-50"
+            >
+              <span className="ml-0.5 text-[13px] font-medium tracking-wider text-red-500">返回</span>
+            </button>
           </div>
         </>
       )}
@@ -407,7 +378,7 @@ export default function Detail() {
           >
             <X size={20} />
           </button>
-          <Login isModal onSuccess={() => { setShowLoginModal(false); setShowPaymentSheet(true); }} />
+          <Login isModal onSuccess={() => { setShowLoginModal(false); void handleDonateClick(); }} />
         </div>
       )}
     </div>
