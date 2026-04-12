@@ -3,6 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { MessageSquare, Headphones, ChevronRight, FileText, History } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
+function getFallbackNickname(user: { email?: string | null; phone?: string | null; user_metadata?: { login_phone?: string } }) {
+  return user.email?.replace('@msf.local', '') || user.phone || user.user_metadata?.login_phone || '未设置';
+}
+
 export default function Profile() {
   const navigate = useNavigate();
   const [nickname, setNickname] = useState('');
@@ -18,7 +22,7 @@ export default function Profile() {
       }
       setUserId(user.id.slice(0, 8).toUpperCase());
 
-      const fallbackNickname = user.email ? user.email.replace('@msf.local', '') : '未设置';
+      const fallbackNickname = getFallbackNickname(user);
 
       const { data } = await supabase
         .from('profiles')

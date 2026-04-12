@@ -3,6 +3,10 @@ import { ChevronLeft, ChevronRight, X, Loader2, CheckCircle2, AlertCircle } from
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
+function getFallbackNickname(user: { email?: string | null; phone?: string | null; user_metadata?: { login_phone?: string } }) {
+  return user.email?.replace('@msf.local', '') || user.phone || user.user_metadata?.login_phone || '未设置';
+}
+
 type EditField = 'nickname' | 'avatar' | 'password' | null;
 
 const AVATARS = ['👨‍💼', '👩‍💼', '🧑‍🦲', '👨‍🍳', '🧑‍💻', '👩‍🎤', '🧑‍🚀', '🧑‍🎨'];
@@ -29,8 +33,7 @@ export default function ProfileInfo() {
       if (!user) return;
       setUserId(user.id.slice(0, 8).toUpperCase());
 
-      // Try to get account name from email
-      const fallbackNickname = user.email ? user.email.replace('@msf.local', '') : '未设置';
+      const fallbackNickname = getFallbackNickname(user);
 
       const { data } = await supabase
         .from('profiles')
