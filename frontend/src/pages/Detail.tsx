@@ -2,13 +2,27 @@ import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, Gift, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { normalizeChineseMainlandPhone } from '../lib/userDisplay';
 import Login from './Login';
 
 const donateH5Url = import.meta.env.VITE_DONATE_H5_URL || '';
 
 function getUserPhone(session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']) {
-  const rawPhone = session?.user?.phone || session?.user?.email?.replace(/@msf\.local$/, '') || '';
-  return /^1[3-9]\d{9}$/.test(rawPhone) ? rawPhone : '';
+  const candidates = [
+    session?.user?.phone,
+    session?.user?.user_metadata?.login_phone,
+    session?.user?.email?.replace(/@msf\.local$/, ''),
+  ];
+
+  for (const value of candidates) {
+    const normalizedPhone = normalizeChineseMainlandPhone(value);
+
+    if (normalizedPhone) {
+      return normalizedPhone;
+    }
+  }
+
+  return '';
 }
 
 function buildDonateUrl(phone: string) {

@@ -2,10 +2,7 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-
-function getFallbackNickname(user: { email?: string | null; phone?: string | null; user_metadata?: { login_phone?: string } }) {
-  return user.email?.replace('@msf.local', '') || user.phone || user.user_metadata?.login_phone || '未设置';
-}
+import { getFallbackNickname } from '../lib/userDisplay';
 
 type EditField = 'nickname' | 'avatar' | 'password' | null;
 
