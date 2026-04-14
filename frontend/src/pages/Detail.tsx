@@ -39,6 +39,92 @@ function buildDonateUrl(phone: string) {
   return url.toString();
 }
 
+function tryParseJson(value: unknown): Record<string, unknown> | null {
+  if (!value) return null;
+
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function extractMaterialIdFromRemark(remark: unknown): string | null {
+  const queue: unknown[] = [remark];
+  const visited = new Set<unknown>();
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+
+    if (!current || visited.has(current)) {
+      continue;
+    }
+
+    visited.add(current);
+
+    const parsed = tryParseJson(current);
+    if (!parsed) {
+      continue;
+    }
+
+    const directMaterialId = parsed.material_id;
+    if (typeof directMaterialId === 'string' && directMaterialId.trim()) {
+      return directMaterialId.trim();
+    }
+
+    const directSource = parsed.source;
+    if (typeof directSource === 'string' && directSource.trim()) {
+      return directSource.trim();
+    }
+
+    const directMaterialCode = parsed.materialId;
+    if (typeof directMaterialCode === 'string' && directMaterialCode.trim()) {
+      return directMaterialCode.trim();
+    }
+
+    Object.values(parsed).forEach((value) => {
+      if (value && (typeof value === 'string' || typeof value === 'object')) {
+        queue.push(value);
+      }
+    });
+  }
+
+  return null;
+}
+
+function extractIssueNumber(title: string) {
+  const match = title.match(/第\s*(\d+)\s*期/i);
+  return match ? Number(match[1]) : -1;
+}
+
+function compareRecords(
+  left: { title: string; created_at: string },
+  right: { title: string; created_at: string },
+) {
+  const issueDiff = extractIssueNumber(right.title) - extractIssueNumber(left.title);
+  if (issueDiff !== 0) {
+    return issueDiff;
+  }
+
+  const timeDiff = new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
+  if (timeDiff !== 0) {
+    return timeDiff;
+  }
+
+  return right.title.localeCompare(left.title, 'zh-CN');
+}
+
 export default function Detail() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -57,8 +143,48 @@ export default function Detail() {
   const [isRedeeming, setIsRedeeming] = useState(false);
 
   // 获取详情和往期记录
+  const checkUnlockStatus = useCallback(async (userId: string) => {
+    if (!id) return false;
+
+    const { data: exData } = await supabase
+      .from('exchange_records')
+      .select('id')
+      .eq('material_id', id)
+      .eq('user_id', userId)
+      .eq('status', '已完成')
+      .limit(1);
+
+    if (exData && exData.length > 0) {
+      return true;
+    }
+
+    const { data: matchedPurchaseRecords } = await supabase
+      .from('purchase_records')
+      .select('id')
+      .eq('auth_user_id', userId)
+      .eq('payment_status', 'paid')
+      .eq('material_id', id)
+      .limit(1);
+
+    if (matchedPurchaseRecords && matchedPurchaseRecords.length > 0) {
+      return true;
+    }
+
+    const { data: purchaseData } = await supabase
+      .from('purchase_records')
+      .select('id, order_no, payment_status, material_id, remark')
+      .eq('auth_user_id', userId)
+      .eq('payment_status', 'paid')
+      .order('completed_time', { ascending: false })
+      .limit(20);
+
+    return (purchaseData || []).some((record) => record.material_id === id || extractMaterialIdFromRemark(record.remark) === id);
+  }, [id]);
+
   const fetchData = useCallback(async () => {
     if (!id) return;
+    setLoading(true);
+    setIsUnlocked(false);
     
     // 取资料详情
     const { data: matData } = await supabase.from('materials').select('*').eq('id', id).single();
@@ -69,31 +195,29 @@ export default function Detail() {
     // 取往期记录
     const { data: recData } = await supabase.from('records').select('*').eq('material_id', id).order('created_at', { ascending: false });
     if (recData) {
-      setRecords(recData.map(r => ({
+      const normalizedRecords = recData.map(r => ({
         id: r.id,
         title: r.title,
         content: r.content,
         created_at: r.created_at,
         is_winner: Boolean(r.is_winner),
-      })));
+      }));
+
+      normalizedRecords.sort(compareRecords);
+      setRecords(normalizedRecords);
     }
     
     // 检查当前用户是否已解锁该内容
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user?.id) {
-      const { data: exData } = await supabase
-        .from('exchange_records')
-        .select('id')
-        .eq('material_id', id)
-        .eq('user_id', session.user.id)
-        .limit(1);
-      if (exData && exData.length > 0) {
+      const unlocked = await checkUnlockStatus(session.user.id);
+      if (unlocked) {
         setIsUnlocked(true);
       }
     }
 
     setLoading(false);
-  }, [id]);
+  }, [checkUnlockStatus, id]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -124,6 +248,20 @@ export default function Detail() {
       supabase.removeChannel(channel);
     };
   }, [id, fetchData]);
+
+  useEffect(() => {
+    if (!showDonateIframe || isUnlocked) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void fetchData();
+    }, 3000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [fetchData, isUnlocked, showDonateIframe]);
 
   const handleRedeem = async () => {
     if (!redeemCode.trim()) {
@@ -197,8 +335,17 @@ export default function Detail() {
       return;
     }
 
-    setDonateIframeUrl(nextUrl);
+    const donateUrl = new URL(nextUrl);
+    donateUrl.searchParams.set('source', id || '');
+    donateUrl.searchParams.set('material_id', id || '');
+
+    setDonateIframeUrl(donateUrl.toString());
     setShowDonateIframe(true);
+  };
+
+  const handleCloseDonateIframe = () => {
+    setShowDonateIframe(false);
+    void fetchData();
   };
 
   return (
@@ -355,11 +502,11 @@ export default function Detail() {
         <>
           <div
             className="fixed inset-0 bg-black/40 z-[60] backdrop-blur-[1px]"
-            onClick={() => setShowDonateIframe(false)}
+            onClick={handleCloseDonateIframe}
           />
           <div className="fixed inset-0 z-[70] bg-white animate-[slideUp_0.2s_ease-out]">
             <button
-              onClick={() => setShowDonateIframe(false)}
+              onClick={handleCloseDonateIframe}
               className="absolute left-3 z-[80] flex h-10 w-10 items-center justify-center rounded-full bg-[#f5f7fb]/95 text-gray-700 shadow-[0_4px_12px_rgba(15,23,42,0.08)] ring-1 ring-black/5 backdrop-blur-[2px] transition-colors hover:bg-white"
               style={{ top: 'calc(env(safe-area-inset-top, 0px) + 10px)' }}
             >
@@ -375,7 +522,7 @@ export default function Detail() {
               />
             </div>
             <button
-              onClick={() => setShowDonateIframe(false)}
+              onClick={handleCloseDonateIframe}
               className="fixed right-3 bottom-24 z-[80] flex h-12 w-12 items-center justify-center rounded-full border-2 border-red-400 bg-white/95 shadow-[0_2px_12px_rgba(239,68,68,0.25)] backdrop-blur-[2px] transition-colors hover:bg-red-50"
             >
               <span className="ml-0.5 text-[13px] font-medium tracking-wider text-red-500">返回</span>
