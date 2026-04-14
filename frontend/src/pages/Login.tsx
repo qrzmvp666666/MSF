@@ -111,7 +111,7 @@ async function signInWithAccountOrPhonePassword(account: string, password: strin
 export default function Login({ isModal = false, onSuccess }: { isModal?: boolean; onSuccess?: () => void }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<AuthTab>('login');
-  const [loginMode, setLoginMode] = useState<AuthMode>('password');
+  const [loginMode, setLoginMode] = useState<AuthMode>('code');
   const [registerMode, setRegisterMode] = useState<AuthMode>('password');
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');

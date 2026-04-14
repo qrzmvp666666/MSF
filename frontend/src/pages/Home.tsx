@@ -109,12 +109,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex bg-gray-100 rounded-full p-1 mb-4">
-          <button className="flex-1 bg-red-500 text-white py-2 rounded-full text-sm font-medium">所有套餐</button>
-          <button className="flex-1 text-gray-600 py-2 rounded-full text-sm font-medium">历史战绩</button>
-        </div>
-
         {/* Search */}
         <div className="relative mb-4">
           <Search size={18} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />

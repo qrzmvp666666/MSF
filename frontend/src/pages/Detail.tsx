@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronLeft, Gift, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -131,6 +131,7 @@ export default function Detail() {
   const [showDonateIframe, setShowDonateIframe] = useState(false);
   const [donateIframeUrl, setDonateIframeUrl] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const historySectionRef = useRef<HTMLDivElement | null>(null);
   
   // 数据状态
   const [material, setMaterial] = useState<{ title: string, price: string, created_at: string } | null>(null);
@@ -338,6 +339,7 @@ export default function Detail() {
     const donateUrl = new URL(nextUrl);
     donateUrl.searchParams.set('source', id || '');
     donateUrl.searchParams.set('material_id', id || '');
+    donateUrl.searchParams.set('price', material?.price || '');
 
     setDonateIframeUrl(donateUrl.toString());
     setShowDonateIframe(true);
@@ -348,15 +350,38 @@ export default function Detail() {
     void fetchData();
   };
 
+  const handleScrollToHistory = () => {
+    historySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleBackClick = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+
+    navigate('/');
+  };
+
   return (
     <div className="bg-gray-50 min-h-screen pb-20 relative">
       <div className="px-4 py-4">
         {/* Author info */}
-        <div className="flex items-center mb-4 mt-2">
-          <div className="w-10 h-10 rounded-full bg-orange-200 overflow-hidden flex items-center justify-center mr-3">
-             <span className="text-xl">🎁</span>
+        <div className="relative mb-4 mt-2 flex items-center justify-center">
+          <button
+            type="button"
+            onClick={handleBackClick}
+            className="absolute left-0 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm border border-gray-100 transition-colors hover:bg-gray-50 active:scale-[0.98]"
+            aria-label="返回"
+          >
+            <ChevronLeft size={22} />
+          </button>
+          <div className="flex items-center">
+            <div className="mr-3 flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-orange-200">
+              <span className="text-xl">🎁</span>
+            </div>
+            <span className="text-lg font-medium text-gray-800">广聚天下</span>
           </div>
-          <span className="font-medium text-gray-800 text-lg">广聚天下</span>
         </div>
 
         {/* Notice */}
@@ -381,13 +406,21 @@ export default function Detail() {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-gray-800 text-lg flex items-center mb-0">
                   <span className="w-1 h-4 bg-red-500 rounded-full mr-2"></span>
-                  当前最新内容（付费）
+                  付费内容
                 </h3>
-                {records.length > 0 && (
-                  <span className="text-xs text-red-500 bg-red-50 px-2 py-1 rounded border border-red-100">
-                    已更新: {new Date(records[0].created_at).toLocaleDateString()}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleScrollToHistory}
+                    className="text-xs text-orange-500 bg-orange-50 px-2.5 py-1 rounded border border-orange-100 transition-colors hover:bg-orange-100"
+                  >
+                    往期
+                  </button>
+                  {records.length > 0 && (
+                    <span className="text-xs text-red-500 bg-red-50 px-2 py-1 rounded border border-red-100">
+                      已更新: {new Date(records[0].created_at).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
               </div>
               
               {isUnlocked && records.length > 0 ? (
@@ -443,7 +476,7 @@ export default function Detail() {
             </div>
 
             {/* History records */}
-            <div className="border-t border-gray-100 pt-6">
+            <div ref={historySectionRef} className="border-t border-gray-100 pt-6">
               <h3 className="font-bold text-gray-800 mb-4 text-lg flex items-center">
                 <span className="w-1 h-4 bg-orange-500 rounded-full mr-2"></span>
                 相关往期战绩参考
@@ -475,23 +508,15 @@ export default function Detail() {
         )}
       </div>
 
-      {/* Floating Red Return Button */}
-      <div 
-        onClick={() => navigate(-1)}
-        className="fixed right-3 bottom-24 w-12 h-12 bg-white/95 rounded-full flex items-center justify-center border-2 border-red-400 shadow-[0_2px_12px_rgba(239,68,68,0.25)] z-40 cursor-pointer hover:bg-red-50 transition-colors backdrop-blur-[2px]"
-      >
-        <span className="text-red-500 font-medium text-[13px] tracking-wider ml-0.5">返回</span>
-      </div>
-
       {/* Floating Action Bar */}
-      <div className="fixed bottom-6 left-0 right-0 z-50 px-4 flex justify-center">
-        <div className="bg-[#fdf4cd] rounded-full flex items-center justify-between pl-5 pr-1 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.1)] border border-[#fbe8b5] w-full max-w-[600px]">
-          <div className="text-[#9d5c36] font-bold text-[17px] tracking-wide flex-1">
+      <div className="fixed bottom-5 left-0 right-0 z-50 px-4 flex justify-center">
+        <div className="bg-[#fdf4cd] rounded-full flex items-center justify-between pl-4 pr-1 py-1 shadow-[0_4px_16px_rgba(0,0,0,0.1)] border border-[#fbe8b5] w-full max-w-[520px]">
+          <div className="text-[#9d5c36] font-bold text-[15px] tracking-wide flex-1">
             打赏价格: {loading || !material ? '--' : parseFloat(material.price).toFixed(2)}
           </div>
           <button
             onClick={handleDonateClick}
-            className="bg-gradient-to-r from-[#ff6b57] to-[#ff4141] hover:opacity-95 text-white font-bold text-[16px] px-8 py-3 rounded-full shadow-md transition-opacity"
+            className="bg-gradient-to-r from-[#ff6b57] to-[#ff4141] hover:opacity-95 text-white font-bold text-[15px] px-6 py-2.5 rounded-full shadow-md transition-opacity"
           >
             打赏解锁
           </button>
@@ -523,9 +548,10 @@ export default function Detail() {
             </div>
             <button
               onClick={handleCloseDonateIframe}
-              className="fixed right-3 bottom-24 z-[80] flex h-12 w-12 items-center justify-center rounded-full border-2 border-red-400 bg-white/95 shadow-[0_2px_12px_rgba(239,68,68,0.25)] backdrop-blur-[2px] transition-colors hover:bg-red-50"
+              className="fixed right-0 bottom-24 z-[80] overflow-hidden rounded-l-full border-y-2 border-l-2 border-red-300 bg-white/95 pl-4 pr-3 py-2.5 text-left shadow-[0_4px_14px_rgba(239,68,68,0.18)] backdrop-blur-[2px] transition-colors hover:bg-red-50"
             >
-              <span className="ml-0.5 text-[13px] font-medium tracking-wider text-red-500">返回</span>
+              <span className="block text-[12px] font-semibold leading-4 text-red-500 whitespace-nowrap">支付成功后点此返回</span>
+              <span className="mt-0.5 block text-[11px] leading-4 text-red-400 whitespace-nowrap">查阅付费内容</span>
             </button>
           </div>
         </>
