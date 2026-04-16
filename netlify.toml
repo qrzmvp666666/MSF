@@ -4,6 +4,12 @@
   command = "npm run build"
 
 [[redirects]]
+  from = "/pay/notify"
+  to = "https://owdpmdgtnuacmjedgywu.supabase.co/functions/v1/pay_notify"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

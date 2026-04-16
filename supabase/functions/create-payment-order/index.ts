@@ -137,9 +137,13 @@ function getRefererUrl(req: Request) {
   }
 }
 
-function getNotifyUrl(supabaseUrl: string) {
+function getNotifyUrl(req: Request, supabaseUrl: string) {
+  const origin = getRequestOrigin(req);
+  if (origin) return `${origin}/pay/notify`;
+
   const configured = Deno.env.get("PAY_NOTIFY_URL")?.trim();
   if (configured) return configured;
+
   return `${supabaseUrl.replace(/\/$/, "")}/functions/v1/pay_notify`;
 }
 
@@ -173,7 +177,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: "支付环境变量未配置完整" }, 500);
   }
 
-  const notifyUrl = getNotifyUrl(supabaseUrl);
+  const notifyUrl = getNotifyUrl(req, supabaseUrl);
   const returnUrl = getReturnUrl(req);
   if (!returnUrl) {
     return json({ error: "缺少返回地址，需配置 PAY_RETURN_URL 或从请求来源自动推导" }, 500);
