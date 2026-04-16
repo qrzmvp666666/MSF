@@ -27,7 +27,7 @@ function AppShell() {
     <div className={`${isLogin ? '' : 'pb-14'} max-w-md mx-auto bg-gray-50 min-h-screen relative shadow-lg overflow-x-hidden`}>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/admin" element={<Admin />} />
+        <Route path="/adminqyf" element={<Admin />} />
         <Route path="/" element={<Home />} />
         <Route path="/detail/:id" element={<Detail />} />
         <Route path="/profile" element={<Profile />} />
@@ -45,7 +45,7 @@ function AppShell() {
 function BottomNav() {
   const location = useLocation();
   const path = location.pathname;
-  if (path.startsWith('/detail') || path === '/profile/info' || path === '/admin' || path === '/complaint' || path === '/complaint-records') return null;
+  if (path.startsWith('/detail') || path === '/profile/info' || path === '/adminqyf' || path === '/complaint' || path === '/complaint-records') return null;
 
   return (
     <div className="fixed bottom-0 w-full max-w-md bg-white border-t flex justify-around items-center h-16 text-xs z-50">

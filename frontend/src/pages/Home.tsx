@@ -11,6 +11,7 @@ interface Material {
   views: number;
   sales: number;
   streak: number;
+  sort_order: number;
 }
 
 function formatViews(n: number) {
@@ -29,6 +30,7 @@ export default function Home() {
     const { data } = await supabase
       .from('materials')
       .select('*')
+      .order('sort_order', { ascending: true })
       .order('created_at', { ascending: false });
     
     if (data) {
@@ -40,6 +42,7 @@ export default function Home() {
         views: m.views ?? 0,
         sales: m.sales ?? 0,
         streak: m.streak ?? 0,
+        sort_order: m.sort_order ?? 0,
       }));
       setMaterials(formattedData);
       setDisplayMaterials(formattedData);

@@ -4,6 +4,21 @@ import StarterKit from '@tiptap/starter-kit';
 import { ArrowLeft, Plus, Edit2, Trash2, Check, User, Lock, Loader2, Eye, EyeOff, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Record {
   id: string;
@@ -24,6 +39,7 @@ interface Material {
   views: number;
   sales: number;
   streak: number;
+  sort_order: number;
 }
 
 const extensions = [StarterKit];
@@ -131,6 +147,59 @@ const issueOptions = Array.from({ length: 365 }, (_, index) => {
   };
 });
 
+function SortableItem({ material, onEdit, onDelete }: {
+  material: Material;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: material.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative">
+      <div className="flex items-start gap-2">
+        {/* 拖拽手柄 */}
+        <button {...attributes} {...listeners} className="mt-1 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing shrink-0 touch-none">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/>
+            <circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/>
+            <circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/>
+          </svg>
+        </button>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base font-medium text-gray-800 leading-snug mb-2">{material.title}</h3>
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            {material.streak > 0 && (
+              <span className="bg-red-50 text-red-500 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-red-100">🔥 连胜{material.streak}期</span>
+            )}
+            {material.views > 0 && (
+              <span className="bg-orange-50 text-orange-500 text-[11px] font-medium px-2 py-0.5 rounded-full border border-orange-100">👁 {material.views.toLocaleString()}阅读</span>
+            )}
+            {material.sales > 0 && (
+              <span className="bg-green-50 text-green-600 text-[11px] font-medium px-2 py-0.5 rounded-full border border-green-100">📦 已售{material.sales}份</span>
+            )}
+          </div>
+          <div className="flex justify-between items-center text-xs text-gray-400">
+            <span className="text-red-500 font-semibold">单价: ¥{material.price}</span>
+            <span>{material.records.length} 条记录</span>
+          </div>
+        </div>
+      </div>
+      <div className="flex justify-end gap-4 pt-3 mt-3 border-t border-gray-50">
+        <button onClick={onEdit} className="flex items-center text-sm text-blue-500 font-medium bg-blue-50 px-4 py-1.5 rounded-full">
+          <Edit2 size={15} className="mr-1.5" /> 编辑
+        </button>
+        <button onClick={onDelete} className="flex items-center text-sm text-gray-500 font-medium bg-gray-50 px-4 py-1.5 rounded-full">
+          <Trash2 size={15} className="mr-1.5" /> 删除
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const RichTextEditor = memo(({ initialContent, onChange }: { initialContent: string, onChange: (val: string) => void }) => {
   const [content] = useState(initialContent);
   const editor = useEditor({
@@ -174,13 +243,15 @@ export default function Admin() {
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [editingRecord, setEditingRecord] = useState<Record | null>(null);
 
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
   const fetchMaterials = async () => {
     setLoading(true);
-    const { data: mats, error: matsErr } = await supabase.from('materials').select('*').order('created_at', { ascending: false });
+    const { data: mats, error: matsErr } = await supabase.from('materials').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false });
     const { data: recs, error: recsErr } = await supabase.from('records').select('*').order('issue_number', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false });
     
     if (!matsErr && !recsErr) {
-      const matched = (mats || []).map((m: { id: string, title: string, price: number, created_at: string, views?: number, sales?: number, streak?: number }) => ({
+      const matched = (mats || []).map((m: { id: string, title: string, price: number, created_at: string, views?: number, sales?: number, streak?: number, sort_order?: number }) => ({
         id: m.id,
         title: m.title,
         price: String(m.price || 0),
@@ -188,6 +259,7 @@ export default function Admin() {
         views: m.views ?? 0,
         sales: m.sales ?? 0,
         streak: m.streak ?? 0,
+        sort_order: m.sort_order ?? 0,
         records: (recs || [])
           .filter((r: { id: string, title: string, content: string, material_id: string, is_winner?: boolean, issue_number?: number | null }) => r.material_id === m.id)
           .map((r) => ({
@@ -252,6 +324,7 @@ export default function Admin() {
         views: editingMaterial.views ?? 0,
         sales: editingMaterial.sales ?? 0,
         streak: editingMaterial.streak ?? 0,
+        sort_order: editingMaterial.sort_order ?? 0,
       }).select().single();
       
       if (data && editingMaterial.records && editingMaterial.records.length > 0) {
@@ -271,6 +344,7 @@ export default function Admin() {
         views: editingMaterial.views ?? 0,
         sales: editingMaterial.sales ?? 0,
         streak: editingMaterial.streak ?? 0,
+        sort_order: editingMaterial.sort_order ?? 0,
       }).eq('id', editingMaterial.id);
     }
     setEditingMaterial(null);
@@ -285,6 +359,7 @@ export default function Admin() {
       views: 0,
       sales: 0,
       streak: 0,
+      sort_order: materials.length + 1,
       records: []
     });
   };
@@ -713,38 +788,34 @@ export default function Admin() {
             </div>
 
             <div className="space-y-3">
-              {materials.map(material => (
-                <div key={material.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative">
-                  <div className="pr-2">
-                    <h3 className="text-base font-medium text-gray-800 leading-snug mb-2">{material.title}</h3>
-                    {/* 标签行 */}
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      {material.streak > 0 && (
-                        <span className="bg-red-50 text-red-500 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-red-100">🔥 连胜{material.streak}期</span>
-                      )}
-                      {material.views > 0 && (
-                        <span className="bg-orange-50 text-orange-500 text-[11px] font-medium px-2 py-0.5 rounded-full border border-orange-100">👁 {material.views.toLocaleString()}阅读</span>
-                      )}
-                      {material.sales > 0 && (
-                        <span className="bg-green-50 text-green-600 text-[11px] font-medium px-2 py-0.5 rounded-full border border-green-100">📦 已售{material.sales}份</span>
-                      )}
-                    </div>
-                    <div className="flex justify-between items-center mt-2 text-xs text-gray-400">
-                      <span className="text-red-500 font-semibold">单价: ¥{material.price}</span>
-                      <span>{material.records.length} 条记录</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end gap-4 pt-3 mt-3 border-t border-gray-50">
-                    <button onClick={() => setEditingMaterial({...material})} className="flex items-center text-sm text-blue-500 font-medium bg-blue-50 px-4 py-1.5 rounded-full">
-                      <Edit2 size={15} className="mr-1.5" /> 管理 & 编辑
-                    </button>
-                    <button onClick={() => handleDeleteMaterial(material.id)} className="flex items-center text-sm text-gray-500 font-medium bg-gray-50 px-4 py-1.5 rounded-full">
-                      <Trash2 size={15} className="mr-1.5" /> 删除
-                    </button>
-                  </div>
-                </div>
-              ))}
+              <DndContext
+                sensors={dndSensors}
+                collisionDetection={closestCenter}
+                onDragEnd={async (event: DragEndEvent) => {
+                  const { active, over } = event;
+                  if (!over || active.id === over.id) return;
+                  const oldIndex = materials.findIndex(m => m.id === active.id);
+                  const newIndex = materials.findIndex(m => m.id === over.id);
+                  const reordered = arrayMove(materials, oldIndex, newIndex);
+                  setMaterials(reordered);
+                  await Promise.all(
+                    reordered.map((m, i) =>
+                      supabase.from('materials').update({ sort_order: i + 1 }).eq('id', m.id)
+                    )
+                  );
+                }}
+              >
+                <SortableContext items={materials.map(m => m.id)} strategy={verticalListSortingStrategy}>
+                  {materials.map(material => (
+                    <SortableItem
+                      key={material.id}
+                      material={material}
+                      onEdit={() => setEditingMaterial({...material})}
+                      onDelete={() => handleDeleteMaterial(material.id)}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
 
               {materials.length === 0 && (
                 <div className="text-center py-10 text-gray-400 text-sm bg-white rounded-xl border border-gray-100">
