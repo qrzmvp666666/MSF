@@ -108,11 +108,21 @@ function extractIssueNumber(title: string) {
   return match ? Number(match[1]) : -1;
 }
 
+function normalizeIssueNumber(value: unknown) {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 365) {
+    return null;
+  }
+
+  return value;
+}
+
 function compareRecords(
-  left: { title: string; created_at: string },
-  right: { title: string; created_at: string },
+  left: { title: string; created_at: string; issue_number?: number | null },
+  right: { title: string; created_at: string; issue_number?: number | null },
 ) {
-  const issueDiff = extractIssueNumber(right.title) - extractIssueNumber(left.title);
+  const leftIssue = normalizeIssueNumber(left.issue_number) ?? extractIssueNumber(left.title);
+  const rightIssue = normalizeIssueNumber(right.issue_number) ?? extractIssueNumber(right.title);
+  const issueDiff = rightIssue - leftIssue;
   if (issueDiff !== 0) {
     return issueDiff;
   }
@@ -135,7 +145,7 @@ export default function Detail() {
   
   // 数据状态
   const [material, setMaterial] = useState<{ title: string, price: string, created_at: string } | null>(null);
-  const [records, setRecords] = useState<{ id: string, title: string, content: string, created_at: string, is_winner: boolean }[]>([]);
+  const [records, setRecords] = useState<{ id: string, title: string, content: string, created_at: string, is_winner: boolean, issue_number?: number | null }[]>([]);
   const [loading, setLoading] = useState(true);
   
   // 兑换相关状态
@@ -194,7 +204,7 @@ export default function Detail() {
     }
     
     // 取往期记录
-    const { data: recData } = await supabase.from('records').select('*').eq('material_id', id).order('created_at', { ascending: false });
+    const { data: recData } = await supabase.from('records').select('*').eq('material_id', id).order('issue_number', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false });
     if (recData) {
       const normalizedRecords = recData.map(r => ({
         id: r.id,
@@ -202,6 +212,7 @@ export default function Detail() {
         content: r.content,
         created_at: r.created_at,
         is_winner: Boolean(r.is_winner),
+        issue_number: normalizeIssueNumber(r.issue_number),
       }));
 
       normalizedRecords.sort(compareRecords);

@@ -10,6 +10,7 @@ interface Record {
   title: string;
   content: string;
   is_winner: boolean;
+  issue_number?: number | null;
   material_id?: string;
   created_at?: string;
 }
@@ -29,6 +30,103 @@ const editorProps = {
     class: 'prose prose-sm sm:prose-base focus:outline-none min-h-[150px] border border-gray-200 rounded-md p-3 bg-white',
   },
 };
+
+function extractIssueNumber(title: string) {
+  const match = title.match(/第\s*(\d+)\s*期/i);
+  return match ? Number(match[1]) : null;
+}
+
+function normalizeIssueNumber(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === '') return null;
+
+  const parsed = typeof value === 'number' ? value : Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 365) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function getRecordIssueNumber(record: Pick<Record, 'issue_number' | 'title'>) {
+  return normalizeIssueNumber(record.issue_number) ?? normalizeIssueNumber(extractIssueNumber(record.title));
+}
+
+function compareRecords(left: Record, right: Record) {
+  const leftIssue = getRecordIssueNumber(left) ?? -1;
+  const rightIssue = getRecordIssueNumber(right) ?? -1;
+  const issueDiff = rightIssue - leftIssue;
+  if (issueDiff !== 0) {
+    return issueDiff;
+  }
+
+  const leftTime = left.created_at ? new Date(left.created_at).getTime() : 0;
+  const rightTime = right.created_at ? new Date(right.created_at).getTime() : 0;
+  const timeDiff = rightTime - leftTime;
+  if (timeDiff !== 0) {
+    return timeDiff;
+  }
+
+  return right.title.localeCompare(left.title, 'zh-CN');
+}
+
+function getSuggestedIssueNumber(records: Record[]) {
+  const usedIssues = new Set(
+    records
+      .map((record) => getRecordIssueNumber(record))
+      .filter((issue): issue is number => issue !== null),
+  );
+
+  const todayIssueNumber = getIssueNumberByDate(new Date());
+  if (!usedIssues.has(todayIssueNumber)) {
+    return todayIssueNumber;
+  }
+
+  for (let issue = todayIssueNumber + 1; issue <= 365; issue += 1) {
+    if (!usedIssues.has(issue)) {
+      return issue;
+    }
+  }
+
+  for (let issue = todayIssueNumber - 1; issue >= 1; issue -= 1) {
+    if (!usedIssues.has(issue)) {
+      return issue;
+    }
+  }
+
+  return null;
+}
+
+const ISSUE_DATE_REFERENCE_YEAR = 2020;
+const ISSUE_DATE_TEMPLATE_YEAR = 2021;
+
+function getIssueNumberByDate(date: Date) {
+  const startOfYear = new Date(date.getFullYear(), 0, 1);
+  const currentDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffInMs = currentDate.getTime() - startOfYear.getTime();
+  const dayOfYear = Math.floor(diffInMs / 86400000) + 1;
+
+  return dayOfYear >= 1 && dayOfYear <= 365 ? dayOfYear : 365;
+}
+
+function formatIssueDate(issueNumber: number | null) {
+  const normalizedIssueNumber = normalizeIssueNumber(issueNumber);
+  if (!normalizedIssueNumber) {
+    return '';
+  }
+
+  const date = new Date(ISSUE_DATE_TEMPLATE_YEAR, 0, normalizedIssueNumber);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${ISSUE_DATE_REFERENCE_YEAR}-${month}-${day}`;
+}
+
+const issueOptions = Array.from({ length: 365 }, (_, index) => {
+  const issueNumber = 365 - index;
+  return {
+    value: issueNumber,
+    label: `${String(issueNumber).padStart(2, '0')}期（${formatIssueDate(issueNumber)}）`,
+  };
+});
 
 const RichTextEditor = memo(({ initialContent, onChange }: { initialContent: string, onChange: (val: string) => void }) => {
   const [content] = useState(initialContent);
@@ -76,7 +174,7 @@ export default function Admin() {
   const fetchMaterials = async () => {
     setLoading(true);
     const { data: mats, error: matsErr } = await supabase.from('materials').select('*').order('created_at', { ascending: false });
-    const { data: recs, error: recsErr } = await supabase.from('records').select('*').order('created_at', { ascending: false });
+    const { data: recs, error: recsErr } = await supabase.from('records').select('*').order('issue_number', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false });
     
     if (!matsErr && !recsErr) {
       const matched = (mats || []).map((m: { id: string, title: string, price: number, created_at: string }) => ({
@@ -84,10 +182,14 @@ export default function Admin() {
         title: m.title,
         price: String(m.price || 0),
         created_at: m.created_at,
-        records: (recs || []).filter((r: { id: string, title: string, content: string, material_id: string, is_winner?: boolean }) => r.material_id === m.id).map((r) => ({
-          ...r,
-          is_winner: Boolean(r.is_winner),
-        }))
+        records: (recs || [])
+          .filter((r: { id: string, title: string, content: string, material_id: string, is_winner?: boolean, issue_number?: number | null }) => r.material_id === m.id)
+          .map((r) => ({
+            ...r,
+            issue_number: normalizeIssueNumber(r.issue_number) ?? normalizeIssueNumber(extractIssueNumber(r.title)),
+            is_winner: Boolean(r.is_winner),
+          }))
+          .sort(compareRecords)
       }));
       setMaterials(matched);
       // update editingMaterial if currently editing
@@ -149,6 +251,7 @@ export default function Admin() {
           title: r.title,
           content: r.content,
           is_winner: r.is_winner,
+          issue_number: getRecordIssueNumber(r),
         }));
         await supabase.from('records').insert(recordsToInsert);
       }
@@ -181,15 +284,32 @@ export default function Admin() {
   const handleSaveRecord = async () => {
     if (!editingRecord || !editingMaterial) return;
 
+    const issueNumber = getRecordIssueNumber(editingRecord);
+    if (!issueNumber) {
+      alert('请选择 1-365 之间的期数');
+      return;
+    }
+
+    const duplicateRecord = editingMaterial.records.find((record) => record.id !== editingRecord.id && getRecordIssueNumber(record) === issueNumber);
+    if (duplicateRecord) {
+      alert(`第${issueNumber}期已存在，期数不可重复`);
+      return;
+    }
+
+    const recordToSave = {
+      ...editingRecord,
+      issue_number: issueNumber,
+    };
+
     if (editingMaterial.id.startsWith('new_')) {
       const newRecords = [...editingMaterial.records];
       const idx = newRecords.findIndex(r => r.id === editingRecord.id);
       if (idx >= 0) {
-        newRecords[idx] = editingRecord;
+        newRecords[idx] = recordToSave;
       } else {
-        newRecords.push(editingRecord);
+        newRecords.push(recordToSave);
       }
-      setEditingMaterial({ ...editingMaterial, records: newRecords });
+      setEditingMaterial({ ...editingMaterial, records: newRecords.sort(compareRecords) });
       setEditingRecord(null);
       return;
     }
@@ -197,15 +317,17 @@ export default function Admin() {
     if (editingRecord.id.startsWith('new_')) {
       await supabase.from('records').insert({
         material_id: editingMaterial.id,
-        title: editingRecord.title,
-        content: editingRecord.content,
-        is_winner: editingRecord.is_winner,
+        title: recordToSave.title,
+        content: recordToSave.content,
+        is_winner: recordToSave.is_winner,
+        issue_number: recordToSave.issue_number,
       });
     } else {
       await supabase.from('records').update({
-        title: editingRecord.title,
-        content: editingRecord.content,
-        is_winner: editingRecord.is_winner,
+        title: recordToSave.title,
+        content: recordToSave.content,
+        is_winner: recordToSave.is_winner,
+        issue_number: recordToSave.issue_number,
       }).eq('id', editingRecord.id);
     }
     setEditingRecord(null);
@@ -213,11 +335,13 @@ export default function Admin() {
   };
 
   const handleCreateRecord = () => {
+    const suggestedIssueNumber = editingMaterial ? getSuggestedIssueNumber(editingMaterial.records) : null;
     setEditingRecord({
       id: 'new_' + Date.now(),
       title: '新记录标题',
       content: '<p><span style="color: red; font-size: 18px">输入记录内容...</span></p>',
       is_winner: false,
+      issue_number: suggestedIssueNumber,
     });
   };
 
@@ -337,6 +461,16 @@ export default function Admin() {
 
   // =============== 1. 记录内容编辑器 ===============
   if (editingRecord) {
+    const selectedIssueNumber = getRecordIssueNumber(editingRecord);
+    const selectedIssueDate = formatIssueDate(selectedIssueNumber);
+    const usedIssueNumbers = new Set(
+      (editingMaterial?.records || [])
+        .filter((record) => record.id !== editingRecord.id)
+        .map((record) => getRecordIssueNumber(record))
+        .filter((issue): issue is number => issue !== null),
+    );
+    const availableIssueOptions = issueOptions.filter((option) => !usedIssueNumbers.has(option.value) || option.value === selectedIssueNumber);
+
     return (
       <div className="min-h-screen bg-gray-50 pb-10">
         <div className="sticky top-0 z-10 flex items-center justify-between bg-white px-4 py-3 shadow-sm">
@@ -353,12 +487,33 @@ export default function Admin() {
         <div className="p-4 space-y-4">
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
             <label className="block text-sm font-medium text-gray-700 mb-1">记录标题</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
               value={editingRecord.title}
-              onChange={(e) => setEditingRecord({...editingRecord, title: e.target.value})}
+              onChange={(e) => setEditingRecord({ ...editingRecord, title: e.target.value })}
             />
+          </div>
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <label className="block text-sm font-medium text-gray-700 mb-1">期数</label>
+            <select
+              className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+              value={editingRecord.issue_number ?? ''}
+              onChange={(e) => setEditingRecord({
+                ...editingRecord,
+                issue_number: e.target.value ? Number(e.target.value) : null,
+              })}
+            >
+              <option value="">请选择期数</option>
+              {availableIssueOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <p className="mt-2 text-xs text-gray-400">
+              {selectedIssueNumber && selectedIssueDate
+                ? `${String(selectedIssueNumber).padStart(2, '0')}期对应日期：${selectedIssueDate}。已自动过滤已有记录的期数，期数越大排序越靠前。`
+                : '可选 01 期到 365 期，每期默认对应固定日期，且已自动过滤已有记录的期数，期数越大排序越靠前。'}
+            </p>
           </div>
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
             <label className="block text-sm font-medium text-gray-700 mb-2">中奖状态</label>
@@ -452,7 +607,14 @@ export default function Admin() {
               {editingMaterial.records.map(record => (
                 <div key={record.id} className="bg-white p-3.5 rounded-xl shadow-sm border border-gray-100">
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-[13px] font-bold text-gray-800 truncate pr-2">{record.title}</h3>
+                    <div className="flex items-center gap-2 pr-2 min-w-0">
+                      {getRecordIssueNumber(record) && (
+                        <span className="shrink-0 rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold text-orange-500">
+                          {String(getRecordIssueNumber(record)).padStart(2, '0')}期
+                        </span>
+                      )}
+                      <h3 className="text-[13px] font-bold text-gray-800 truncate">{record.title}</h3>
+                    </div>
                     {record.is_winner && (
                       <span className="shrink-0 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-500">已中</span>
                     )}
