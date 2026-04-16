@@ -21,6 +21,9 @@ interface Material {
   price: string;
   created_at?: string;
   records: Record[];
+  views: number;
+  sales: number;
+  streak: number;
 }
 
 const extensions = [StarterKit];
@@ -177,11 +180,14 @@ export default function Admin() {
     const { data: recs, error: recsErr } = await supabase.from('records').select('*').order('issue_number', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false });
     
     if (!matsErr && !recsErr) {
-      const matched = (mats || []).map((m: { id: string, title: string, price: number, created_at: string }) => ({
+      const matched = (mats || []).map((m: { id: string, title: string, price: number, created_at: string, views?: number, sales?: number, streak?: number }) => ({
         id: m.id,
         title: m.title,
         price: String(m.price || 0),
         created_at: m.created_at,
+        views: m.views ?? 0,
+        sales: m.sales ?? 0,
+        streak: m.streak ?? 0,
         records: (recs || [])
           .filter((r: { id: string, title: string, content: string, material_id: string, is_winner?: boolean, issue_number?: number | null }) => r.material_id === m.id)
           .map((r) => ({
@@ -242,7 +248,10 @@ export default function Admin() {
     if (editingMaterial.id.startsWith('new_')) {
       const { data } = await supabase.from('materials').insert({
         title: editingMaterial.title,
-        price: parseFloat(editingMaterial.price) || 0
+        price: parseFloat(editingMaterial.price) || 0,
+        views: editingMaterial.views ?? 0,
+        sales: editingMaterial.sales ?? 0,
+        streak: editingMaterial.streak ?? 0,
       }).select().single();
       
       if (data && editingMaterial.records && editingMaterial.records.length > 0) {
@@ -258,7 +267,10 @@ export default function Admin() {
     } else {
       await supabase.from('materials').update({
         title: editingMaterial.title,
-        price: parseFloat(editingMaterial.price) || 0
+        price: parseFloat(editingMaterial.price) || 0,
+        views: editingMaterial.views ?? 0,
+        sales: editingMaterial.sales ?? 0,
+        streak: editingMaterial.streak ?? 0,
       }).eq('id', editingMaterial.id);
     }
     setEditingMaterial(null);
@@ -270,6 +282,9 @@ export default function Admin() {
       id: 'new_' + Date.now(),
       title: '新资料标题',
       price: '0.00',
+      views: 0,
+      sales: 0,
+      streak: 0,
       records: []
     });
   };
@@ -584,6 +599,29 @@ export default function Admin() {
                 onChange={(e) => setEditingMaterial({...editingMaterial, price: e.target.value})}
               />
             </div>
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+              <label className="block text-sm font-medium text-gray-700 mb-2">展示标签数据</label>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 w-16 shrink-0">🔥 连胜期</span>
+                  <input type="number" min="0" className="flex-1 border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    value={editingMaterial.streak}
+                    onChange={(e) => setEditingMaterial({...editingMaterial, streak: parseInt(e.target.value) || 0})} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 w-16 shrink-0">👁 阅读量</span>
+                  <input type="number" min="0" className="flex-1 border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    value={editingMaterial.views}
+                    onChange={(e) => setEditingMaterial({...editingMaterial, views: parseInt(e.target.value) || 0})} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 w-16 shrink-0">📦 销售量</span>
+                  <input type="number" min="0" className="flex-1 border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    value={editingMaterial.sales}
+                    onChange={(e) => setEditingMaterial({...editingMaterial, sales: parseInt(e.target.value) || 0})} />
+                </div>
+              </div>
+            </div>
           </div>
 
           <section>
@@ -679,6 +717,18 @@ export default function Admin() {
                 <div key={material.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative">
                   <div className="pr-2">
                     <h3 className="text-base font-medium text-gray-800 leading-snug mb-2">{material.title}</h3>
+                    {/* 标签行 */}
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      {material.streak > 0 && (
+                        <span className="bg-red-50 text-red-500 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-red-100">🔥 连胜{material.streak}期</span>
+                      )}
+                      {material.views > 0 && (
+                        <span className="bg-orange-50 text-orange-500 text-[11px] font-medium px-2 py-0.5 rounded-full border border-orange-100">👁 {material.views.toLocaleString()}阅读</span>
+                      )}
+                      {material.sales > 0 && (
+                        <span className="bg-green-50 text-green-600 text-[11px] font-medium px-2 py-0.5 rounded-full border border-green-100">📦 已售{material.sales}份</span>
+                      )}
+                    </div>
                     <div className="flex justify-between items-center mt-2 text-xs text-gray-400">
                       <span className="text-red-500 font-semibold">单价: ¥{material.price}</span>
                       <span>{material.records.length} 条记录</span>

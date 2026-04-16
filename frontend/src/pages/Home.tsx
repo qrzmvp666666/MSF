@@ -8,6 +8,13 @@ interface Material {
   title: string;
   price: string;
   created_at: string;
+  views: number;
+  sales: number;
+  streak: number;
+}
+
+function formatViews(n: number) {
+  return n >= 10000 ? `${(n / 10000).toFixed(1)}万` : n.toString();
 }
 
 export default function Home() {
@@ -29,7 +36,10 @@ export default function Home() {
         id: m.id,
         title: m.title,
         price: m.price.toString(),
-        created_at: m.created_at
+        created_at: m.created_at,
+        views: m.views ?? 0,
+        sales: m.sales ?? 0,
+        streak: m.streak ?? 0,
       }));
       setMaterials(formattedData);
       setDisplayMaterials(formattedData);
@@ -130,11 +140,33 @@ export default function Home() {
             <div className="text-center py-10 text-gray-400 text-sm">加载数据中...</div>
           ) : displayMaterials.length > 0 ? (
             displayMaterials.map((m) => (
-              <Link to={`/detail/${m.id}`} key={m.id} className="block bg-white rounded-xl p-4 shadow-sm active:bg-gray-50 transition-colors">
-                <div className="flex justify-between items-start mb-6">
+              <Link to={`/detail/${m.id}`} key={m.id} className="block bg-white rounded-xl p-4 shadow-sm active:bg-gray-50 transition-colors border border-gray-100">
+                {/* 标题 + 价格 */}
+                <div className="flex justify-between items-start mb-2">
                   <h3 className="font-bold text-gray-800 text-base leading-snug w-2/3">{m.title}</h3>
                   <span className="text-red-500 font-bold text-lg">¥{parseFloat(m.price).toFixed(2)}</span>
                 </div>
+
+                {/* 标签行 */}
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  {m.streak > 0 && (
+                    <span className="flex items-center gap-0.5 bg-red-50 text-red-500 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-red-100">
+                      🔥 连胜{m.streak}期
+                    </span>
+                  )}
+                  {m.views > 0 && (
+                    <span className="flex items-center gap-0.5 bg-orange-50 text-orange-500 text-[11px] font-medium px-2 py-0.5 rounded-full border border-orange-100">
+                      👁 {formatViews(m.views)}人已阅读
+                    </span>
+                  )}
+                  {m.sales > 0 && (
+                    <span className="flex items-center gap-0.5 bg-green-50 text-green-600 text-[11px] font-medium px-2 py-0.5 rounded-full border border-green-100">
+                      📦 已售{m.sales}份
+                    </span>
+                  )}
+                </div>
+
+                {/* 底部时间 */}
                 <div className="flex justify-between text-xs text-gray-400">
                   <span>发布时间</span>
                   <span>{new Date(m.created_at).toLocaleString('zh-CN', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-')}</span>
