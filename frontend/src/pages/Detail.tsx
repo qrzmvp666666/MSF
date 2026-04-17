@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronLeft, Gift, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { formatWinningOutcome, normalizeWinningAnimal, normalizeWinningNumber } from '../lib/recordOutcome';
 import { normalizeChineseMainlandPhone } from '../lib/userDisplay';
 import Login from './Login';
 
@@ -145,7 +146,7 @@ export default function Detail() {
   
   // 数据状态
   const [material, setMaterial] = useState<{ title: string, price: string, created_at: string } | null>(null);
-  const [records, setRecords] = useState<{ id: string, title: string, content: string, created_at: string, is_winner: boolean, issue_number?: number | null }[]>([]);
+  const [records, setRecords] = useState<{ id: string, title: string, content: string, created_at: string, is_winner: boolean, issue_number?: number | null, winning_animal?: string | null, winning_number?: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   
   // 兑换相关状态
@@ -213,6 +214,8 @@ export default function Detail() {
         created_at: r.created_at,
         is_winner: Boolean(r.is_winner),
         issue_number: normalizeIssueNumber(r.issue_number),
+        winning_animal: normalizeWinningAnimal(r.winning_animal),
+        winning_number: normalizeWinningNumber(r.winning_number),
       }));
 
       normalizedRecords.sort(compareRecords);
@@ -494,20 +497,38 @@ export default function Detail() {
               </h3>
               {records.length > 1 ? (
                 <div className="space-y-4">
-                  {records.slice(1).map(record => (
-                    <div key={record.id} className="relative overflow-hidden bg-orange-50/50 rounded-xl p-4 border border-orange-100/50">
-                      {record.is_winner && (
-                        <div className="pointer-events-none absolute right-3 top-3 rotate-12 rounded-full border-2 border-red-400 px-3 py-1 text-xs font-extrabold tracking-[0.2em] text-red-400 opacity-80">
-                          中奖
+                  {records.slice(1).map((record) => {
+                    const winningOutcome = formatWinningOutcome(record);
+                    const showOutcomeBadge = Boolean(winningOutcome);
+                    const badgeClassName = record.is_winner
+                      ? 'border-red-200/90 text-red-500'
+                      : 'border-black/15 text-gray-600';
+                    const badgeInnerRingClassName = record.is_winner ? 'border-red-300/80' : 'border-black/20';
+                    const badgeTextClassName = record.is_winner ? 'text-red-500' : 'text-gray-600';
+
+                    return (
+                      <div key={record.id} className="relative overflow-hidden bg-orange-50/50 rounded-xl p-4 border border-orange-100/50">
+                        {showOutcomeBadge && (
+                          <div className="pointer-events-none absolute right-3 top-3">
+                            <div className={`relative flex h-[72px] w-[72px] rotate-12 items-center justify-center rounded-full border-2 bg-white/75 shadow-[0_4px_12px_rgba(15,23,42,0.05)] ${badgeClassName}`}>
+                              <div className={`absolute inset-[6px] rounded-full border border-dashed opacity-70 ${badgeInnerRingClassName}`} />
+                              <div className="relative flex flex-col items-center leading-none">
+                                <div className="text-[12px] font-extrabold tracking-[0.18em] opacity-85">{record.is_winner ? '中奖' : '未中'}</div>
+                                <div className={`mt-1 text-[10px] font-bold opacity-85 ${badgeTextClassName}`}>{winningOutcome}</div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        <div className={showOutcomeBadge ? 'pr-24 sm:pr-28' : ''}>
+                          <p className="font-bold text-gray-900 mb-2 truncate">{record.title}</p>
+                          <div 
+                            className="text-[15px] prose-sm prose-p:my-1 prose-headings:my-2 [&_span]:!leading-normal" 
+                            dangerouslySetInnerHTML={{ __html: record.content }} 
+                          />
                         </div>
-                      )}
-                      <p className="font-bold text-gray-900 mb-2 truncate pr-16">{record.title}</p>
-                      <div 
-                        className="text-[15px] prose-sm prose-p:my-1 prose-headings:my-2 [&_span]:!leading-normal" 
-                        dangerouslySetInnerHTML={{ __html: record.content }} 
-                      />
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="bg-white rounded-xl shadow-sm p-8 text-center border border-gray-100 text-gray-400 text-sm">

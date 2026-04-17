@@ -19,6 +19,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { formatWinningOutcome, normalizeWinningAnimal, normalizeWinningNumber } from '../lib/recordOutcome';
 
 interface Record {
   id: string;
@@ -26,6 +27,8 @@ interface Record {
   content: string;
   is_winner: boolean;
   issue_number?: number | null;
+  winning_animal?: string | null;
+  winning_number?: string | null;
   material_id?: string;
   created_at?: string;
 }
@@ -261,11 +264,13 @@ export default function Admin() {
         streak: m.streak ?? 0,
         sort_order: m.sort_order ?? 0,
         records: (recs || [])
-          .filter((r: { id: string, title: string, content: string, material_id: string, is_winner?: boolean, issue_number?: number | null }) => r.material_id === m.id)
+          .filter((r: { id: string, title: string, content: string, material_id: string, is_winner?: boolean, issue_number?: number | null, winning_animal?: string | null, winning_number?: string | null }) => r.material_id === m.id)
           .map((r) => ({
             ...r,
             issue_number: normalizeIssueNumber(r.issue_number) ?? normalizeIssueNumber(extractIssueNumber(r.title)),
             is_winner: Boolean(r.is_winner),
+            winning_animal: normalizeWinningAnimal(r.winning_animal),
+            winning_number: normalizeWinningNumber(r.winning_number),
           }))
           .sort(compareRecords)
       }));
@@ -334,6 +339,8 @@ export default function Admin() {
           content: r.content,
           is_winner: r.is_winner,
           issue_number: getRecordIssueNumber(r),
+          winning_animal: normalizeWinningAnimal(r.winning_animal),
+          winning_number: normalizeWinningNumber(r.winning_number),
         }));
         await supabase.from('records').insert(recordsToInsert);
       }
@@ -389,6 +396,8 @@ export default function Admin() {
     const recordToSave = {
       ...editingRecord,
       issue_number: issueNumber,
+      winning_animal: normalizeWinningAnimal(editingRecord.winning_animal),
+      winning_number: normalizeWinningNumber(editingRecord.winning_number),
     };
 
     if (editingMaterial.id.startsWith('new_')) {
@@ -411,6 +420,8 @@ export default function Admin() {
         content: recordToSave.content,
         is_winner: recordToSave.is_winner,
         issue_number: recordToSave.issue_number,
+        winning_animal: recordToSave.winning_animal,
+        winning_number: recordToSave.winning_number,
       });
     } else {
       await supabase.from('records').update({
@@ -418,6 +429,8 @@ export default function Admin() {
         content: recordToSave.content,
         is_winner: recordToSave.is_winner,
         issue_number: recordToSave.issue_number,
+        winning_animal: recordToSave.winning_animal,
+        winning_number: recordToSave.winning_number,
       }).eq('id', editingRecord.id);
     }
     setEditingRecord(null);
@@ -432,6 +445,8 @@ export default function Admin() {
       content: '<p><span style="color: red; font-size: 18px">输入记录内容...</span></p>',
       is_winner: false,
       issue_number: suggestedIssueNumber,
+      winning_animal: null,
+      winning_number: null,
     });
   };
 
@@ -553,6 +568,7 @@ export default function Admin() {
   if (editingRecord) {
     const selectedIssueNumber = getRecordIssueNumber(editingRecord);
     const selectedIssueDate = formatIssueDate(selectedIssueNumber);
+    const winningOutcome = formatWinningOutcome(editingRecord);
     const usedIssueNumbers = new Set(
       (editingMaterial?.records || [])
         .filter((record) => record.id !== editingRecord.id)
@@ -623,6 +639,39 @@ export default function Admin() {
                 中奖
               </button>
             </div>
+          </div>
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <label className="block text-sm font-medium text-gray-700">中奖记录</label>
+              {editingRecord.is_winner && winningOutcome && (
+                <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-500">
+                  {winningOutcome}
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="text"
+                placeholder="中奖生肖，例如：马"
+                className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                value={editingRecord.winning_animal ?? ''}
+                onChange={(e) => setEditingRecord({
+                  ...editingRecord,
+                  winning_animal: e.target.value,
+                })}
+              />
+              <input
+                type="text"
+                placeholder="中奖号码，例如：22"
+                className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                value={editingRecord.winning_number ?? ''}
+                onChange={(e) => setEditingRecord({
+                  ...editingRecord,
+                  winning_number: e.target.value,
+                })}
+              />
+            </div>
+            <p className="mt-2 text-xs text-gray-400">该信息会展示在后台往期记录卡片和前台“相关往期战绩参考”的右上角。</p>
           </div>
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
             <label className="block text-sm font-medium text-gray-700 mb-1">内容</label>
@@ -717,35 +766,53 @@ export default function Admin() {
             </div>
             
             <div className="space-y-3">
-              {editingMaterial.records.map(record => (
-                <div key={record.id} className="bg-white p-3.5 rounded-xl shadow-sm border border-gray-100">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2 pr-2 min-w-0">
-                      {getRecordIssueNumber(record) && (
-                        <span className="shrink-0 rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold text-orange-500">
-                          {String(getRecordIssueNumber(record)).padStart(2, '0')}期
-                        </span>
-                      )}
-                      <h3 className="text-[13px] font-bold text-gray-800 truncate">{record.title}</h3>
-                    </div>
-                    {record.is_winner && (
-                      <span className="shrink-0 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-500">已中</span>
+              {editingMaterial.records.map((record) => {
+                const winningOutcome = formatWinningOutcome(record);
+                const showOutcomeBadge = Boolean(winningOutcome);
+                const badgeClassName = record.is_winner
+                  ? 'border-red-200/90 text-red-500'
+                  : 'border-black/15 text-gray-600';
+                const badgeInnerRingClassName = record.is_winner ? 'border-red-300/80' : 'border-black/20';
+                const badgeSubtextClassName = record.is_winner ? 'text-red-500' : 'text-gray-600';
+
+                return (
+                  <div key={record.id} className="relative bg-white p-3.5 rounded-xl shadow-sm border border-gray-100">
+                    {showOutcomeBadge && (
+                      <div className="absolute right-3 top-3 z-10">
+                        <div className={`relative flex h-[58px] w-[58px] rotate-12 items-center justify-center rounded-full border-2 bg-white/95 shadow-sm ${badgeClassName}`}>
+                          <div className={`pointer-events-none absolute inset-[4px] rounded-full border border-dashed ${badgeInnerRingClassName}`} />
+                          <div className="relative flex flex-col items-center leading-none">
+                            <div className="text-[10px] font-extrabold tracking-[0.18em]">{record.is_winner ? '中奖' : '未中'}</div>
+                            <div className={`mt-1 text-[9px] font-bold ${badgeSubtextClassName}`}>{winningOutcome}</div>
+                          </div>
+                        </div>
+                      </div>
                     )}
+                    <div className="mb-2 pr-16">
+                      <div className="flex items-center gap-2 pr-2 min-w-0">
+                        {getRecordIssueNumber(record) && (
+                          <span className="shrink-0 rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold text-orange-500">
+                            {String(getRecordIssueNumber(record)).padStart(2, '0')}期
+                          </span>
+                        )}
+                        <h3 className="text-[13px] font-bold text-gray-800 truncate">{record.title}</h3>
+                      </div>
+                    </div>
+                    <div 
+                      className="text-xs text-gray-600 mb-2 bg-red-50/50 px-2.5 py-2 rounded-lg line-clamp-3"
+                      dangerouslySetInnerHTML={{__html: record.content}}
+                    />
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button onClick={() => setEditingRecord({...record})} className="flex items-center text-xs text-blue-500 font-medium bg-blue-50 px-3 py-1.5 rounded-full">
+                        <Edit2 size={13} className="mr-1" /> 编辑
+                      </button>
+                      <button onClick={() => handleDeleteRecord(record.id)} className="flex items-center text-xs text-gray-500 font-medium bg-gray-50 px-3 py-1.5 rounded-full">
+                        <Trash2 size={13} className="mr-1" /> 删除
+                      </button>
+                    </div>
                   </div>
-                  <div 
-                    className="text-xs text-gray-600 mb-2 bg-red-50/50 px-2.5 py-2 rounded-lg line-clamp-3"
-                    dangerouslySetInnerHTML={{__html: record.content}}
-                  />
-                  <div className="flex justify-end gap-3 pt-2">
-                    <button onClick={() => setEditingRecord({...record})} className="flex items-center text-xs text-blue-500 font-medium bg-blue-50 px-3 py-1.5 rounded-full">
-                      <Edit2 size={13} className="mr-1" /> 编辑
-                    </button>
-                    <button onClick={() => handleDeleteRecord(record.id)} className="flex items-center text-xs text-gray-500 font-medium bg-gray-50 px-3 py-1.5 rounded-full">
-                      <Trash2 size={13} className="mr-1" /> 删除
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               
               {editingMaterial.records.length === 0 && (
                 <div className="text-center py-8 text-gray-400 text-sm bg-white rounded-xl border border-gray-100">
