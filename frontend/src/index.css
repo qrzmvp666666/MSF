@@ -2,7 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-body { background-color: #f7f8fa; margin: 0; padding: 0; }
+html, body {
+	height: 100%;
+	background-color: #f7f8fa;
+	overflow: hidden;
+}
+
+#root {
+	height: 100%;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	position: relative;
+}
+
+body {
+	margin: 0;
+	padding: 0;
+	overscroll-behavior-y: none;
+}
+
+/* 底部导航区 */
+.bottom-nav-safe-area {
+	padding-bottom: env(safe-area-inset-bottom, 0px);
+}
 
 .notice-marquee {
 	position: relative;
