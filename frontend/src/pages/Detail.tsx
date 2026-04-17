@@ -136,6 +136,10 @@ function compareRecords(
   return right.title.localeCompare(left.title, 'zh-CN');
 }
 
+function formatViews(n: number) {
+  return n >= 10000 ? `${(n / 10000).toFixed(1)}万` : n.toString();
+}
+
 export default function Detail() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -145,14 +149,11 @@ export default function Detail() {
   const historySectionRef = useRef<HTMLDivElement | null>(null);
   
   // 数据状态
-  const [material, setMaterial] = useState<{ title: string, price: string, created_at: string } | null>(null);
+  const [material, setMaterial] = useState<{ title: string, price: string, created_at: string, views: number, sales: number, streak: number } | null>(null);
   const [records, setRecords] = useState<{ id: string, title: string, content: string, created_at: string, is_winner: boolean, issue_number?: number | null, winning_animal?: string | null, winning_number?: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // 兑换相关状态
   const [isUnlocked, setIsUnlocked] = useState(false);
-  const [redeemCode, setRedeemCode] = useState('');
-  const [isRedeeming, setIsRedeeming] = useState(false);
 
   // 获取详情和往期记录
   const checkUnlockStatus = useCallback(async (userId: string) => {
@@ -201,7 +202,14 @@ export default function Detail() {
     // 取资料详情
     const { data: matData } = await supabase.from('materials').select('*').eq('id', id).single();
     if (matData) {
-      setMaterial({ title: matData.title, price: matData.price.toString(), created_at: matData.created_at });
+      setMaterial({
+        title: matData.title,
+        price: matData.price.toString(),
+        created_at: matData.created_at,
+        views: matData.views ?? 0,
+        sales: matData.sales ?? 0,
+        streak: matData.streak ?? 0,
+      });
     }
     
     // 取往期记录
@@ -278,65 +286,6 @@ export default function Detail() {
     };
   }, [fetchData, isUnlocked, showDonateIframe]);
 
-  const handleRedeem = async () => {
-    if (!redeemCode.trim()) {
-      alert('请输入兑换码');
-      return;
-    }
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      setShowLoginModal(true);
-      return;
-    }
-    
-    setIsRedeeming(true);
-    try {
-      // 验证兑换码
-      const { data: codeData, error: codeError } = await supabase
-        .from('exchange_codes')
-        .select('*')
-        .eq('code', redeemCode)
-        .single();
-        
-      if (codeError || !codeData || codeData.is_used) {
-        alert('兑换码无效或已被使用');
-        setIsRedeeming(false);
-        return;
-      }
-      
-      // 生成兑换记录
-      const title = material ? material.title : '兑换内容';
-      const { error: recordError } = await supabase.from('exchange_records').insert({
-        user_id: session.user.id,
-        material_id: id,
-        code: redeemCode,
-        title: title,
-        status: '已完成'
-      });
-      
-      if (recordError) {
-        alert('生成兑换记录失败: ' + recordError.message);
-        setIsRedeeming(false);
-        return;
-      }
-      
-      // 更新兑换码状态
-      await supabase
-        .from('exchange_codes')
-        .update({ is_used: true })
-        .eq('id', codeData.id);
-        
-      alert('兑换成功！');
-      setIsUnlocked(true);
-      setRedeemCode('');
-    } catch (e: any) {
-      console.error(e);
-      alert('兑换出错: ' + e.message);
-    } finally {
-      setIsRedeeming(false);
-    }
-  };
-
   const handleDonateClick = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -409,10 +358,28 @@ export default function Detail() {
           <div className="text-center py-20 text-gray-500">资料不存在或已被删除</div>
         ) : (
           <>
-            <div className="flex items-center text-xs text-gray-500 mb-6 mt-2">
-              <span>{new Date(material.created_at).toLocaleString('zh-CN', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-')}</span>
-              <span className="mx-2">•</span>
-              <span>123321人已阅读</span>
+            <div className="mb-6 mt-2">
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                {material.streak > 0 && (
+                  <span className="flex items-center gap-0.5 bg-red-50 text-red-500 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-red-100">
+                    🔥 连胜{material.streak}期
+                  </span>
+                )}
+                {material.views > 0 && (
+                  <span className="flex items-center gap-0.5 bg-orange-50 text-orange-500 text-[11px] font-medium px-2 py-0.5 rounded-full border border-orange-100">
+                    👁 {formatViews(material.views)}人已阅读
+                  </span>
+                )}
+                {material.sales > 0 && (
+                  <span className="flex items-center gap-0.5 bg-green-50 text-green-600 text-[11px] font-medium px-2 py-0.5 rounded-full border border-green-100">
+                    📦 已售{material.sales}份
+                  </span>
+                )}
+              </div>
+              <div className="flex justify-between text-xs text-gray-400">
+                <span>发布时间</span>
+                <span>{new Date(material.created_at).toLocaleString('zh-CN', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-')}</span>
+              </div>
             </div>
 
             {/* Paid Content */}
@@ -453,31 +420,8 @@ export default function Detail() {
                 <div className="bg-white rounded-xl shadow-sm p-8 flex flex-col items-center justify-center border border-gray-100">
                   <Gift className="text-red-400 w-12 h-12 mb-4 opacity-80" />
                   <p className="text-gray-400 text-sm mb-5">
-                    打赏 ¥{parseFloat(material.price).toFixed(2)} 或使用兑换码解锁
+                    打赏 ¥{parseFloat(material.price).toFixed(2)} 解锁付费内容
                   </p>
-                  
-                  <div className="w-full max-w-xs relative mb-4 flex items-center">
-                    <input 
-                      type="text" 
-                      value={redeemCode}
-                      onChange={e => setRedeemCode(e.target.value)}
-                      placeholder="请输入兑换码" 
-                      className="w-full border border-gray-200 rounded-full pl-4 pr-20 py-2.5 text-sm focus:outline-none focus:border-red-400 transition-colors bg-gray-50"
-                    />
-                    <button 
-                      onClick={handleRedeem}
-                      disabled={isRedeeming}
-                      className="absolute right-1 top-1 bottom-1 px-4 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white rounded-full text-sm font-medium whitespace-nowrap active:scale-[0.98] disabled:opacity-50 transition-all shadow-sm"
-                    >
-                      {isRedeeming ? '...' : '兑换'}
-                    </button>
-                  </div>
-
-                  <div className="flex items-center w-full max-w-xs my-2">
-                    <div className="flex-1 border-t border-gray-200"></div>
-                    <span className="px-3 text-xs text-gray-400 font-medium tracking-widest uppercase">或者</span>
-                    <div className="flex-1 border-t border-gray-200"></div>
-                  </div>
 
                   <button 
                     onClick={handleDonateClick}
@@ -493,7 +437,7 @@ export default function Detail() {
             <div ref={historySectionRef} className="border-t border-gray-100 pt-6">
               <h3 className="font-bold text-gray-800 mb-4 text-lg flex items-center">
                 <span className="w-1 h-4 bg-orange-500 rounded-full mr-2"></span>
-                相关往期战绩参考
+                往期记录参考
               </h3>
               {records.length > 1 ? (
                 <div className="space-y-4">
@@ -541,19 +485,21 @@ export default function Detail() {
       </div>
 
       {/* Floating Action Bar */}
-      <div className="fixed bottom-5 left-0 right-0 z-50 px-4 flex justify-center">
-        <div className="bg-[#fdf4cd] rounded-full flex items-center justify-between pl-4 pr-1 py-1 shadow-[0_4px_16px_rgba(0,0,0,0.1)] border border-[#fbe8b5] w-full max-w-[520px]">
-          <div className="text-[#9d5c36] font-bold text-[15px] tracking-wide flex-1">
-            打赏价格: {loading || !material ? '--' : parseFloat(material.price).toFixed(2)}
+      {!isUnlocked && (
+        <div className="fixed bottom-5 left-0 right-0 z-50 px-4 flex justify-center">
+          <div className="bg-[#fdf4cd] rounded-full flex items-center justify-between pl-4 pr-1 py-1 shadow-[0_4px_16px_rgba(0,0,0,0.1)] border border-[#fbe8b5] w-full max-w-[520px]">
+            <div className="text-[#9d5c36] font-bold text-[15px] tracking-wide flex-1">
+              打赏价格: {loading || !material ? '--' : parseFloat(material.price).toFixed(2)}
+            </div>
+            <button
+              onClick={handleDonateClick}
+              className="bg-gradient-to-r from-[#ff6b57] to-[#ff4141] hover:opacity-95 text-white font-bold text-[15px] px-6 py-2.5 rounded-full shadow-md transition-opacity"
+            >
+              打赏解锁
+            </button>
           </div>
-          <button
-            onClick={handleDonateClick}
-            className="bg-gradient-to-r from-[#ff6b57] to-[#ff4141] hover:opacity-95 text-white font-bold text-[15px] px-6 py-2.5 rounded-full shadow-md transition-opacity"
-          >
-            打赏解锁
-          </button>
         </div>
-      </div>
+      )}
 
       {showDonateIframe && (
         <>
