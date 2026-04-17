@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Lock, Eye, EyeOff, MessageSquare, User, XCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, Lock, Eye, EyeOff, MessageSquare, User, XCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 type AuthTab = 'login' | 'register';
@@ -168,6 +168,15 @@ export default function Login({ isModal = false, onSuccess }: { isModal?: boolea
     setError('');
   }
 
+  function handleBackClick() {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+
+    navigate('/');
+  }
+
   function validatePhone() {
     if (!account) {
       throw new Error('请输入手机号');
@@ -331,6 +340,17 @@ export default function Login({ isModal = false, onSuccess }: { isModal?: boolea
         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10" />
         <div className="absolute -top-4 -left-8 w-28 h-28 rounded-full bg-white/10" />
         <div className="absolute bottom-0 left-0 right-0 h-10 bg-white rounded-t-[32px]" />
+
+        {!isModal && (
+          <button
+            type="button"
+            onClick={handleBackClick}
+            className="absolute left-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-gray-700 shadow-sm border border-white/60 transition-all duration-100 hover:bg-white active:scale-95 active:bg-gray-50 active:shadow-none touch-manipulation"
+            aria-label="返回"
+          >
+            <ArrowLeft size={20} />
+          </button>
+        )}
 
         <div className="relative z-10 flex flex-col items-center mb-8">
           <div className="mb-1 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/20 backdrop-blur-sm shadow-inner">

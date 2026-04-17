@@ -151,7 +151,7 @@ export default function ProfileInfo() {
         <button 
           onClick={async () => {
             await supabase.auth.signOut();
-            navigate('/login');
+            navigate('/login', { replace: true });
           }}
           className="mt-6 flex w-full items-center justify-center rounded-2xl bg-white py-3.5 text-[15px] font-medium text-red-500 shadow-sm"
         >

@@ -37,18 +37,7 @@ export default function Orders() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <div className="sticky top-0 z-10 bg-gray-50 px-4 py-3">
-        {/* Tabs */}
-        <div className="flex bg-gray-200/60 rounded-full p-1 backdrop-blur-sm">
-          <button 
-            className="flex-1 py-2 rounded-full text-sm font-medium transition-colors bg-red-500 text-white shadow-sm"
-          >
-            订单记录
-          </button>
-        </div>
-      </div>
-
-      <div className="px-4 py-1">
+      <div className="px-4 py-4">
         {loading ? (
            <div className="py-20 flex justify-center text-gray-400">
              <Loader2 className="animate-spin" size={28} />

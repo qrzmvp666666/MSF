@@ -47,7 +47,7 @@ export default function Profile() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        navigate('/login');
+        navigate('/login', { replace: true });
         return;
       }
       setUserId(user.id.slice(0, 8).toUpperCase());
