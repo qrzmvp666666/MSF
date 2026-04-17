@@ -434,11 +434,13 @@ export default function Detail() {
                 </div>
               ) : (
                 <div className="bg-white rounded-xl shadow-sm p-8 flex flex-col items-center justify-center border border-gray-100">
+                  {currentIssueNumber ? (
+                    <p className="mb-3 text-center">
+                      <span className="text-lg font-bold text-red-500">第{currentIssueNumber}期</span>
+                    </p>
+                  ) : null}
                   <Gift className="text-red-400 w-12 h-12 mb-4 opacity-80" />
                   <p className="mb-5 text-center text-sm text-gray-400">
-                    {currentIssueNumber ? (
-                      <span className="mr-1 text-lg font-bold text-red-500">第{currentIssueNumber}期</span>
-                    ) : null}
                     <span>打赏 ¥{parseFloat(material.price).toFixed(2)} 解锁付费内容</span>
                   </p>
 
