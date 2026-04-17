@@ -140,6 +140,20 @@ function formatViews(n: number) {
   return n >= 10000 ? `${(n / 10000).toFixed(1)}万` : n.toString();
 }
 
+function resolveIssueNumber(title?: string, issueNumber?: number | null) {
+  const normalizedIssueNumber = normalizeIssueNumber(issueNumber);
+  if (normalizedIssueNumber) {
+    return normalizedIssueNumber;
+  }
+
+  if (!title) {
+    return null;
+  }
+
+  const extractedIssueNumber = extractIssueNumber(title);
+  return extractedIssueNumber > 0 ? extractedIssueNumber : null;
+}
+
 export default function Detail() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -326,6 +340,8 @@ export default function Detail() {
     navigate('/');
   };
 
+  const currentIssueNumber = resolveIssueNumber(records[0]?.title ?? material?.title, records[0]?.issue_number);
+
   return (
     <div className="bg-gray-50 min-h-screen pb-20 relative">
       <div className="px-4 py-4">
@@ -419,8 +435,11 @@ export default function Detail() {
               ) : (
                 <div className="bg-white rounded-xl shadow-sm p-8 flex flex-col items-center justify-center border border-gray-100">
                   <Gift className="text-red-400 w-12 h-12 mb-4 opacity-80" />
-                  <p className="text-gray-400 text-sm mb-5">
-                    打赏 ¥{parseFloat(material.price).toFixed(2)} 解锁付费内容
+                  <p className="mb-5 text-center text-sm text-gray-400">
+                    {currentIssueNumber ? (
+                      <span className="mr-1 text-lg font-bold text-red-500">第{currentIssueNumber}期</span>
+                    ) : null}
+                    <span>打赏 ¥{parseFloat(material.price).toFixed(2)} 解锁付费内容</span>
                   </p>
 
                   <button 
